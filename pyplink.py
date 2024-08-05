@@ -12,6 +12,7 @@ class BrakeMode:
     BRAKE = 0
     COAST = 1
 
+test = 0
 
 class MotorChannel:
     def __init__(self):
@@ -45,7 +46,7 @@ class MotorChannel:
         # Acquire lock
         self.lock.acquire()
 
-        if self.control_mode != ControlMode.VELOCITY:
+        if self._control_mode != ControlMode.VELOCITY:
             # Return a warning if the control mode is not set to velocity
             print("Warning: Setting velocity command with control mode set to power.")
 
@@ -70,7 +71,7 @@ class MotorChannel:
         # Acquire lock
         self.lock.acquire()
 
-        if self.control_mode != ControlMode.POWER:
+        if self._control_mode != ControlMode.POWER:
             # Return a warning if the control mode is not set to power
             print("Warning: Setting power command with control mode set to velocity.")
 
@@ -137,8 +138,7 @@ class MotorChannel:
 
         return value
 
-    @position.setter
-    def __position(self, value):
+    def update_position(self, value):
         # Acquire lock
         self.lock.acquire()
         # Set the value
@@ -157,8 +157,8 @@ class MotorChannel:
 
         return value
 
-    @velocity.setter
-    def __velocity(self, value):
+
+    def update_velocity(self, value):
         # Acquire lock
         self.lock.acquire()
         # Set the value
@@ -257,7 +257,7 @@ class InputStruct:
 class Plink:
     BUFFER_IN_SIZE = 49
 
-    def __init__(self, frequency = 0.5, timeout = 5.0):
+    def __init__(self, frequency = 100, timeout = 5.0):
 
         # Configure SPI bus
         # self.spi = spidev.SpiDev()
@@ -285,17 +285,17 @@ class Plink:
     def update_motor_states(self, response: InputStruct):
 
         # Update the motor states
-        self.channel1.__position = response.channel_1_pos
-        self.channel1.__velocity = response.channel_1_vel
+        self.channel1.update_position(response.channel_1_pos)
+        self.channel1.update_velocity(response.channel_1_vel)
 
-        self.channel2.__position = response.channel_2_pos
-        self.channel2.__velocity = response.channel_2_vel
+        self.channel2.update_position(response.channel_2_pos)
+        self.channel2.update_velocity(response.channel_2_vel)
 
-        self.channel3.__position = response.channel_3_pos
-        self.channel3.__velocity = response.channel_3_vel
+        self.channel3.update_position(response.channel_3_pos)
+        self.channel3.update_velocity(response.channel_3_vel)
 
-        self.channel4.__position = response.channel_4_pos
-        self.channel4.__velocity = response.channel_4_vel
+        self.channel4.update_position(response.channel_4_pos)
+        self.channel4.update_velocity(response.channel_4_vel)
 
     def transfer(self):
         # Prepare data from current state
@@ -309,19 +309,20 @@ class Plink:
         # response = InputStruct(self.spi.xfer2(data.get_packed_struct()))
         # Mock response for now
         # Print the data out
-        print(data)
+        # print(data)
 
         response = InputStruct()
         response.valid = True
-        response.channel_1_pos = 1.0
-        response.channel_1_vel = 2.0
-        response.channel_2_pos = 3.0
-        response.channel_2_vel = 4.0
-        response.channel_3_pos = 5.0
-        response.channel_3_vel = 6.0
-        response.channel_4_pos = 7.0
-        response.channel_4_vel = 8.0
-        print(response)
+        global test
+        response.channel_1_pos = 1.0 + test
+        response.channel_1_vel = 2.0 + test
+        response.channel_2_pos = 3.0 + test
+        response.channel_2_vel = 4.0 + test
+        response.channel_3_pos = 5.0 + test
+        response.channel_3_vel = 6.0 + test
+        response.channel_4_pos = 7.0 + test
+        response.channel_4_vel = 8.0 + test
+        test += 1
 
         # Update the motor states
         if(response.valid):
@@ -335,16 +336,19 @@ class Plink:
     def comms_thread(self):
         try:
             while True:
+                start = time.time()
                 # Send the message
                 self.transfer()
-
-                # Sleep
-                time.sleep(1.0/self.frequency)
 
                 if self.last_message_time is not None:
                     if time.time() - self.last_message_time > self.timeout:
                         print("No response from SPI device")
                         break
+
+                # Sleep for the remainder of the cycle
+                delta = time.time() - start
+                sleep_time = 1.0/self.frequency - delta
+                time.sleep(sleep_time if sleep_time > 0 else 0)
 
         except KeyboardInterrupt:
             # Handle keyboard interrupt (Ctrl+C)
