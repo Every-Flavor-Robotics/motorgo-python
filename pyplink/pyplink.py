@@ -1,17 +1,20 @@
-# import spidev
+import spidev
 import time
 import struct
 import threading
 import atexit
+
 
 # Enums to match C++ definitions
 class ControlMode:
     VELOCITY = 0
     POWER = 1
 
+
 class BrakeMode:
     BRAKE = 0
     COAST = 1
+
 
 class MotorChannel:
     def __init__(self):
@@ -45,7 +48,9 @@ class MotorChannel:
         """
         with self.lock:
             if self._control_mode != ControlMode.VELOCITY:
-                print("Warning: Setting velocity command with control mode set to power.")
+                print(
+                    "Warning: Setting velocity command with control mode set to power."
+                )
             self._velocity_command = value
 
     @property
@@ -63,7 +68,9 @@ class MotorChannel:
         """
         with self.lock:
             if self._control_mode != ControlMode.POWER:
-                print("Warning: Setting power command with control mode set to velocity.")
+                print(
+                    "Warning: Setting power command with control mode set to velocity."
+                )
             self._power_command = value
 
     @property
@@ -103,7 +110,11 @@ class MotorChannel:
         """
         Get the command based on the current control mode.
         """
-        return self.velocity_command if self.control_mode == ControlMode.VELOCITY else self.power_command
+        return (
+            self.velocity_command
+            if self.control_mode == ControlMode.VELOCITY
+            else self.power_command
+        )
 
     @property
     def position(self) -> float:
@@ -135,10 +146,17 @@ class MotorChannel:
         with self.lock:
             self._velocity = value
 
+
 class OutputStruct:
     BUFFER_OUT_SIZE = 49
 
-    def __init__(self, channel1: MotorChannel, channel2: MotorChannel, channel3: MotorChannel, channel4: MotorChannel):
+    def __init__(
+        self,
+        channel1: MotorChannel,
+        channel2: MotorChannel,
+        channel3: MotorChannel,
+        channel4: MotorChannel,
+    ):
         """
         Initialize the output structure with motor channels' commands and modes.
         """
@@ -163,38 +181,42 @@ class OutputStruct:
         """
         Pack the structure data into bytes for transmission.
         """
-        return struct.pack('4f8B',
-                           self.channel_1_command,
-                           self.channel_2_command,
-                           self.channel_3_command,
-                           self.channel_4_command,
-                           self.channel_1_control_mode,
-                           self.channel_2_control_mode,
-                           self.channel_3_control_mode,
-                           self.channel_4_control_mode,
-                           self.channel_1_brake_mode,
-                           self.channel_2_brake_mode,
-                           self.channel_3_brake_mode,
-                           self.channel_4_brake_mode)
+        return struct.pack(
+            "4f8B",
+            self.channel_1_command,
+            self.channel_2_command,
+            self.channel_3_command,
+            self.channel_4_command,
+            self.channel_1_control_mode,
+            self.channel_2_control_mode,
+            self.channel_3_control_mode,
+            self.channel_4_control_mode,
+            self.channel_1_brake_mode,
+            self.channel_2_brake_mode,
+            self.channel_3_brake_mode,
+            self.channel_4_brake_mode,
+        )
 
     def __str__(self) -> str:
         """
         Return a string representation of the output structure.
         """
-        return (f"OutputStruct:\n"
-                f"Valid: {self.valid}\n"
-                f"Channel 1 Command: {self.channel_1_command}\n"
-                f"Channel 2 Command: {self.channel_2_command}\n"
-                f"Channel 3 Command: {self.channel_3_command}\n"
-                f"Channel 4 Command: {self.channel_4_command}\n"
-                f"Channel 1 Control Mode: {self.channel_1_control_mode}\n"
-                f"Channel 2 Control Mode: {self.channel_2_control_mode}\n"
-                f"Channel 3 Control Mode: {self.channel_3_control_mode}\n"
-                f"Channel 4 Control Mode: {self.channel_4_control_mode}\n"
-                f"Channel 1 Brake Mode: {self.channel_1_brake_mode}\n"
-                f"Channel 2 Brake Mode: {self.channel_2_brake_mode}\n"
-                f"Channel 3 Brake Mode: {self.channel_3_brake_mode}\n"
-                f"Channel 4 Brake Mode: {self.channel_4_brake_mode}\n")
+        return (
+            f"OutputStruct:\n"
+            f"Valid: {self.valid}\n"
+            f"Channel 1 Command: {self.channel_1_command}\n"
+            f"Channel 2 Command: {self.channel_2_command}\n"
+            f"Channel 3 Command: {self.channel_3_command}\n"
+            f"Channel 4 Command: {self.channel_4_command}\n"
+            f"Channel 1 Control Mode: {self.channel_1_control_mode}\n"
+            f"Channel 2 Control Mode: {self.channel_2_control_mode}\n"
+            f"Channel 3 Control Mode: {self.channel_3_control_mode}\n"
+            f"Channel 4 Control Mode: {self.channel_4_control_mode}\n"
+            f"Channel 1 Brake Mode: {self.channel_1_brake_mode}\n"
+            f"Channel 2 Brake Mode: {self.channel_2_brake_mode}\n"
+            f"Channel 3 Brake Mode: {self.channel_3_brake_mode}\n"
+            f"Channel 4 Brake Mode: {self.channel_4_brake_mode}\n"
+        )
 
 
 class InputStruct:
@@ -204,6 +226,16 @@ class InputStruct:
         """
         Initialize the input structure and decode data if provided.
         """
+        self.valid = False
+        self.channel_1_pos = 0
+        self.channel_1_vel = 0
+        self.channel_2_pos = 0
+        self.channel_2_vel = 0
+        self.channel_3_pos = 0
+        self.channel_3_vel = 0
+        self.channel_4_pos = 0
+        self.channel_4_vel = 0
+
         if data is not None:
             self.decode(data)
 
@@ -211,7 +243,7 @@ class InputStruct:
         """
         Decode the input data into the structure fields.
         """
-        unpacked_data = struct.unpack_from('<?8f', data)
+        unpacked_data = struct.unpack_from("<?8f", data)
         self.valid = unpacked_data[0]
         self.channel_1_pos = unpacked_data[1]
         self.channel_1_vel = unpacked_data[2]
@@ -226,20 +258,23 @@ class InputStruct:
         """
         Return a string representation of the input structure.
         """
-        return (f"InputStruct:\n"
-                f"Valid: {self.valid}\n"
-                f"Channel 1 Position: {self.channel_1_pos}\n"
-                f"Channel 1 Velocity: {self.channel_1_vel}\n"
-                f"Channel 2 Position: {self.channel_2_pos}\n"
-                f"Channel 2 Velocity: {self.channel_2_vel}\n"
-                f"Channel 3 Position: {self.channel_3_pos}\n"
-                f"Channel 3 Velocity: {self.channel_3_vel}\n"
-                f"Channel 4 Position: {self.channel_4_pos}\n"
-                f"Channel 4 Velocity: {self.channel_4_vel}\n")
+        return (
+            f"InputStruct:\n"
+            f"Valid: {self.valid}\n"
+            f"Channel 1 Position: {self.channel_1_pos}\n"
+            f"Channel 1 Velocity: {self.channel_1_vel}\n"
+            f"Channel 2 Position: {self.channel_2_pos}\n"
+            f"Channel 2 Velocity: {self.channel_2_vel}\n"
+            f"Channel 3 Position: {self.channel_3_pos}\n"
+            f"Channel 3 Velocity: {self.channel_3_vel}\n"
+            f"Channel 4 Position: {self.channel_4_pos}\n"
+            f"Channel 4 Velocity: {self.channel_4_vel}\n"
+        )
+
 
 class Plink:
 
-    def __init__(self, frequency: int = 100, timeout: float = 5.0):
+    def __init__(self, frequency: int = 100, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
@@ -258,6 +293,8 @@ class Plink:
         self.frequency = frequency
         self.timeout = timeout
 
+        self.running = False
+
     def connect(self):
         """
         Start the communication thread.
@@ -268,7 +305,6 @@ class Plink:
         self.thread = threading.Thread(target=self.comms_thread)
         self.thread.daemon = True  # Set the thread as a daemon thread
         self.thread.start()
-
 
     def update_motor_states(self, response: InputStruct):
         """
@@ -295,11 +331,7 @@ class Plink:
         Prepare and send data, then receive and process the response.
         """
         # Prepare data from current state
-        data = OutputStruct(
-            self.channel1,
-            self.channel2,
-            self.channel3,
-            self.channel4)
+        data = OutputStruct(self.channel1, self.channel2, self.channel3, self.channel4)
         data.valid = True
 
         # Send data and receive response (Mock response for now)
@@ -317,7 +349,6 @@ class Plink:
         response.channel_3_vel = 6.0
         response.channel_4_pos = 7.0
         response.channel_4_vel = 8.0
-
 
         # Update the motor states
         if response.valid:
