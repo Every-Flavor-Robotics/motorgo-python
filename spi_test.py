@@ -92,6 +92,7 @@ try:
         ]
 
         # Prepare data
+        # Prep data time
         data = prepare_data(valid, channel_commands, control_modes, brake_modes)
 
         # Send the data over SPI and receive a response
@@ -109,7 +110,7 @@ try:
         print(f"Channel 3 Pos: {channel_3_pos}, Vel: {channel_3_vel}")
         print(f"Channel 4 Pos: {channel_4_pos}, Vel: {channel_4_vel}")
 
-        time.sleep(0.5)  # Wait for 1 second before sending the next message
+        time.sleep(0.5)
 
 except KeyboardInterrupt:
     # Clean up on Ctrl+C
