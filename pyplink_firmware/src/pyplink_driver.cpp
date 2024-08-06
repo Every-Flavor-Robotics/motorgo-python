@@ -1,9 +1,16 @@
+// #include <Adafruit_LIS3MDL.h>
+// #include <Adafruit_LSM6DS33.h>
 #include <ESP32SPISlave.h>
+#include <Wire.h>
 
 #include "SPI.h"
 #include "helper.h"
 #include "motorgo_plink.h"
 #include "utils.h"
+
+// IMU objects
+// Adafruit_LSM6DS33 lsm6ds;
+// Adafruit_LIS3MDL lis3mdl;
 
 MotorGo::MotorGoPlink plink;
 MotorGo::MotorChannel& ch1 = plink.ch1;
@@ -11,35 +18,51 @@ MotorGo::MotorChannel& ch2 = plink.ch2;
 MotorGo::MotorChannel& ch3 = plink.ch3;
 MotorGo::MotorChannel& ch4 = plink.ch4;
 
-#define MOSI 42
-#define MISO 41
+#define MOSI 48
+#define MISO 39
 #define SCK 40
-#define SS 39
+#define SS 21
 
 static constexpr size_t QUEUE_SIZE = 1;
-static constexpr size_t BUFFER_SIZE =
-    64;  // Increase buffer size to handle larger messages
 uint8_t tx_buf[BUFFER_SIZE]{0};
 uint8_t rx_buf[BUFFER_SIZE]{0};
 
 data_out_t data_out;
 data_in_t data_in;
 
-void construct_data_out() {}
-
 ESP32SPISlave slave;
 void setup()
 {
   Serial.begin(115200);
 
-  delay(5000);
+  //   delay(5000);
+
+  //   Wire1.begin(HIDDEN_SDA, HIDDEN_SCL, 400000);
+
+  //   bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
+  //   bool lis3mdl_success = lis3mdl.begin_I2C(0x1C, &Wire1);
+
+  //   Restart if IMU initialization fails
+  //   if (!lsm6ds_success || !lis3mdl_success)
+  //   {
+  //     Serial.println("IMU initialization failed, restarting!");
+  //     ESP.restart();
+  //   }
+
+  //   lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
+  //   lsm6ds.setAccelDataRate(LSM6DS_RATE_208_HZ);
+  //   lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
+  //   lsm6ds.setGyroDataRate(LSM6DS_RATE_208_HZ);
+
+  //   lis3mdl.setPerformanceMode(LIS3MDL_ULTRAHIGHMODE);
+  //   lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
+  //   lis3mdl.setDataRate(LIS3MDL_DATARATE_300_HZ);
 
   slave.setDataMode(SPI_MODE0);    // default: SPI_MODE0
   slave.setQueueSize(QUEUE_SIZE);  // default: 1
 
   // begin() after setting
-  slave.begin(HSPI, SCK, MISO, MOSI,
-              SS);  // default: HSPI (please refer README for pin assignments)
+  slave.begin(FSPI, SCK, MISO, MOSI, SS);
 
   //   Serial.println(BUFFER_IN_SIZE);
   Serial.println(BUFFER_OUT_SIZE);
@@ -55,8 +78,11 @@ void setup()
   data_out.channel_3_vel = 6.0;
   data_out.channel_4_pos = 7.0;
   data_out.channel_4_vel = 8.0;
+
+  plink.init();
 }
 
+unsigned long last_data_time = 0;
 void loop()
 {
   data_out.channel_1_pos = ch1.get_position();
@@ -75,76 +101,92 @@ void loop()
   // Copy data to tx buffer
   memcpy(tx_buf, data_out.raw, BUFFER_OUT_SIZE);
 
-  // start and wait to complete one BIG transaction (same data will be received
-  // from slave)
   const size_t received_bytes =
       slave.transfer(tx_buf, rx_buf, BUFFER_SIZE, 100);
 
-  //   Decode data into data_in_t
-  //   Serial.println(received_bytes);
-  memcpy(data_in.raw, rx_buf, BUFFER_SIZE);
+  if (received_bytes != 0)
+  {
+    // No data received, do nothing
+    //   Decode data into data_in_t
+    memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
 
-  //   Print contents of data_in
-  Serial.print("valid: ");
-  Serial.println(data_in.valid);
-  Serial.print("channel_1_brake_mode: ");
-  Serial.println((int)data_in.channel_1_brake_mode);
-  Serial.print("channel_2_brake_mode: ");
-  Serial.println((int)data_in.channel_2_brake_mode);
-  Serial.print("channel_3_brake_mode: ");
-  Serial.println((int)data_in.channel_3_brake_mode);
-  Serial.print("channel_4_brake_mode: ");
-  Serial.println((int)data_in.channel_4_brake_mode);
-  Serial.print("channel_1_command: ");
-  Serial.println(data_in.channel_1_command);
-  Serial.print("channel_2_command: ");
-  Serial.println(data_in.channel_2_command);
-  Serial.print("channel_3_command: ");
-  Serial.println(data_in.channel_3_command);
-  Serial.print("channel_4_command: ");
-  Serial.println(data_in.channel_4_command);
+    // Use freq_println to print the data at a specific frequency
+    //   String str_out = "data_in: ";
+    //   str_out += "valid: ";
+    //   str_out += data_in.valid;
+    //   str_out += "\nchannel_1_brake_mode: ";
+    //   str_out += (int)data_in.channel_1_brake_mode;
+    //   str_out += "\nchannel_2_brake_mode: ";
+    //   str_out += (int)data_in.channel_2_brake_mode;
+    //   str_out += "\nchannel_3_brake_mode: ";
+    //   str_out += (int)data_in.channel_3_brake_mode;
+    //   str_out += "\nchannel_4_brake_mode: ";
+    //   str_out += (int)data_in.channel_4_brake_mode;
+    //   str_out += "\nchannel_1_command: ";
+    //   str_out += data_in.channel_1_command;
+    //   str_out += "\nchannel_2_command: ";
+    //   str_out += data_in.channel_2_command;
+    //   str_out += "\nchannel_3_command: ";
+    //   str_out += data_in.channel_3_command;
+    //   str_out += "\nchannel_4_command: ";
+    //   str_out += data_in.channel_4_command;
 
-  //   if (data_in.valid)
-  //   {
-  //     if (data_in.channel_1_brake_mode == BrakeMode::BRAKE)
-  //     {
-  //       ch1.set_brake();
-  //     }
-  //     else
-  //     {
-  //       ch1.set_coast();
-  //     }
+    //   freq_println(str_out, 10);
 
-  //     if (data_in.channel_2_brake_mode == BrakeMode::BRAKE)
-  //     {
-  //       ch2.set_brake();
-  //     }
-  //     else
-  //     {
-  //       ch2.set_coast();
-  //     }
+    if (data_in.valid)
+    {
+      if (data_in.channel_1_brake_mode == BrakeMode::BRAKE)
+      {
+        ch1.set_brake();
+      }
+      else
+      {
+        ch1.set_coast();
+      }
 
-  //     if (data_in.channel_3_brake_mode == BrakeMode::BRAKE)
-  //     {
-  //       ch3.set_brake();
-  //     }
-  //     else
-  //     {
-  //       ch3.set_coast();
-  //     }
+      if (data_in.channel_2_brake_mode == BrakeMode::BRAKE)
+      {
+        ch2.set_brake();
+      }
+      else
+      {
+        ch2.set_coast();
+      }
 
-  //     if (data_in.channel_4_brake_mode == BrakeMode::BRAKE)
-  //     {
-  //       ch4.set_brake();
-  //     }
-  //     else
-  //     {
-  //       ch4.set_coast();
-  //     }
+      if (data_in.channel_3_brake_mode == BrakeMode::BRAKE)
+      {
+        ch3.set_brake();
+      }
+      else
+      {
+        ch3.set_coast();
+      }
 
-  //     ch1.set_power(data_in.channel_1_command);
-  //     ch2.set_power(data_in.channel_2_command);
-  //     ch3.set_power(data_in.channel_3_command);
-  //     ch4.set_power(data_in.channel_4_command);
-}
+      if (data_in.channel_4_brake_mode == BrakeMode::BRAKE)
+      {
+        ch4.set_brake();
+      }
+      else
+      {
+        ch4.set_coast();
+      }
+
+      ch1.set_power(data_in.channel_1_command);
+      ch2.set_power(data_in.channel_2_command);
+      ch3.set_power(data_in.channel_3_command);
+      ch4.set_power(data_in.channel_4_command);
+
+      last_data_time = millis();
+    }
+  }
+
+  if (millis() - last_data_time > 1000)
+  {
+    ch1.set_power(0);
+    ch2.set_power(0);
+    ch3.set_power(0);
+    ch4.set_power(0);
+  }
+
+  delay(2);
 }
