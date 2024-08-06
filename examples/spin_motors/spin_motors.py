@@ -67,7 +67,7 @@ def main():
         print(
             f"Channel 4 position: {plink.channel4.position}, velocity: {plink.channel4.velocity}"
         )
-        print("-----")
+        print("----")
 
         # Delay as long as you need, communications continue in the background
         time.sleep(0.1)
