@@ -40,19 +40,19 @@ union data_out_t
   uint8_t raw[BUFFER_OUT_SIZE];
 };
 
-enum class ControlMode
+enum class ControlMode : uint8_t
 {
   VELOCITY,
   POWER
 };
 
-enum class BrakeMode
+enum class BrakeMode : uint8_t
 {
   BRAKE,
   COAST
 };
 
-#define BUFFER_IN_SIZE 49
+#define BUFFER_IN_SIZE 25
 union data_in_t
 {
   struct __attribute__((packed))
@@ -81,6 +81,8 @@ union data_in_t
 
   uint8_t raw[BUFFER_IN_SIZE];
 };
+
+#define BUFFER_SIZE 40
 
 void print_data_in(const data_in_t &data)
 {
