@@ -285,7 +285,7 @@ class InputStruct:
 
 class Plink:
 
-    def __init__(self, frequency: int = 0.5, timeout: float = 2.0):
+    def __init__(self, frequency: int = 100, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
