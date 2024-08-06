@@ -148,7 +148,7 @@ class MotorChannel:
 
 
 class OutputStruct:
-    BUFFER_OUT_SIZE = 49
+    BUFFER_OUT_SIZE = 25
 
     def __init__(
         self,
@@ -177,12 +177,13 @@ class OutputStruct:
         self.channel_3_brake_mode = channel3.brake_mode
         self.channel_4_brake_mode = channel4.brake_mode
 
-    def get_packed_struct(self) -> bytes:
+    def get_packed_struct(self, output_size = None) -> bytes:
         """
         Pack the structure data into bytes for transmission.
         """
-        return struct.pack(
-            "4f8B",
+        packed = struct.pack(
+            "<?4f8B",
+            True,
             self.channel_1_command,
             self.channel_2_command,
             self.channel_3_command,
@@ -196,6 +197,14 @@ class OutputStruct:
             self.channel_3_brake_mode,
             self.channel_4_brake_mode,
         )
+
+        assert len(packed) == self.BUFFER_OUT_SIZE
+
+        if output_size is not None and output_size > len(packed):
+            return packed + b"\x00" * (output_size - len(packed))
+
+        return packed
+
 
     def __str__(self) -> str:
         """
@@ -297,6 +306,10 @@ class Plink:
 
         self.running = False
 
+        self.transfer_size = max(
+            OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE
+        )
+
     def connect(self):
         """
         Start the communication thread.
@@ -337,20 +350,7 @@ class Plink:
         data.valid = True
 
         # Send data and receive response (Mock response for now)
-        response = InputStruct(self.spi.xfer2(data.get_packed_struct()))
-
-        # # Mock response for testing
-        # response = InputStruct()
-        # response.valid = True
-
-        # response.channel_1_pos = 1.0
-        # response.channel_1_vel = 2.0
-        # response.channel_2_pos = 3.0
-        # response.channel_2_vel = 4.0
-        # response.channel_3_pos = 5.0
-        # response.channel_3_vel = 6.0
-        # response.channel_4_pos = 7.0
-        # response.channel_4_vel = 8.0
+        response = InputStruct(self.spi.xfer2(data.get_packed_struct(self.transfer_size)))
 
         # Update the motor states
         if response.valid:
