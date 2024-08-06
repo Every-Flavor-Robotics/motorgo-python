@@ -239,10 +239,12 @@ class InputStruct:
         if data is not None:
             self.decode(data)
 
-    def decode(self, data: bytes):
+    def decode(self, data: list):
         """
         Decode the input data into the structure fields.
         """
+        data = bytearray(data)
+
         unpacked_data = struct.unpack_from("<?8f", data)
         self.valid = unpacked_data[0]
         self.channel_1_pos = unpacked_data[1]
@@ -274,14 +276,14 @@ class InputStruct:
 
 class Plink:
 
-    def __init__(self, frequency: int = 100, timeout: float = 1.0):
+    def __init__(self, frequency: int = 0.5, timeout: float = 2.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
-        # self.spi = spidev.SpiDev()
-        # self.spi.open(0, 0)  # Open bus 0, device (CS) 0
-        # self.spi.mode = 0
-        # self.spi.max_speed_hz = 50000  # Set SPI speed
+        self.spi = spidev.SpiDev()
+        self.spi.open(0, 0)  # Open bus 0, device (CS) 0
+        self.spi.mode = 0
+        self.spi.max_speed_hz = 50000  # Set SPI speed
 
         self.last_message_time = None
 
@@ -335,20 +337,20 @@ class Plink:
         data.valid = True
 
         # Send data and receive response (Mock response for now)
-        # response = InputStruct(self.spi.xfer2(data.get_packed_struct()))
+        response = InputStruct(self.spi.xfer2(data.get_packed_struct()))
 
-        # Mock response for testing
-        response = InputStruct()
-        response.valid = True
+        # # Mock response for testing
+        # response = InputStruct()
+        # response.valid = True
 
-        response.channel_1_pos = 1.0
-        response.channel_1_vel = 2.0
-        response.channel_2_pos = 3.0
-        response.channel_2_vel = 4.0
-        response.channel_3_pos = 5.0
-        response.channel_3_vel = 6.0
-        response.channel_4_pos = 7.0
-        response.channel_4_vel = 8.0
+        # response.channel_1_pos = 1.0
+        # response.channel_1_vel = 2.0
+        # response.channel_2_pos = 3.0
+        # response.channel_2_vel = 4.0
+        # response.channel_3_pos = 5.0
+        # response.channel_3_vel = 6.0
+        # response.channel_4_pos = 7.0
+        # response.channel_4_vel = 8.0
 
         # Update the motor states
         if response.valid:
