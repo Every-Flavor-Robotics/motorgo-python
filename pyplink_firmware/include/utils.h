@@ -2,8 +2,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#define BUFFER_OUT_SIZE 33
-
 void freq_println(String str, int freq)
 {
   static unsigned long last_print_time = 0;
@@ -15,6 +13,8 @@ void freq_println(String str, int freq)
     last_print_time = now;
   }
 }
+
+#define BUFFER_OUT_SIZE 57
 
 union data_out_t
 {
@@ -35,6 +35,15 @@ union data_out_t
 
     float channel_4_pos;
     float channel_4_vel;
+
+    // IMU data
+    float gyro_x;
+    float gyro_y;
+    float gyro_z;
+
+    float accel_x;
+    float accel_y;
+    float accel_z;
   };
 
   uint8_t raw[BUFFER_OUT_SIZE];
@@ -82,7 +91,7 @@ union data_in_t
   uint8_t raw[BUFFER_IN_SIZE];
 };
 
-#define BUFFER_SIZE 40
+#define BUFFER_SIZE 64
 
 void print_data_in(const data_in_t &data)
 {

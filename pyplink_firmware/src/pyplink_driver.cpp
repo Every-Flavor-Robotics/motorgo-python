@@ -1,5 +1,5 @@
-// #include <Adafruit_LIS3MDL.h>
-// #include <Adafruit_LSM6DS33.h>
+#include <Adafruit_LIS3MDL.h>
+#include <Adafruit_LSM6DS33.h>
 #include <ESP32SPISlave.h>
 #include <Wire.h>
 
@@ -9,8 +9,8 @@
 #include "utils.h"
 
 // IMU objects
-// Adafruit_LSM6DS33 lsm6ds;
-// Adafruit_LIS3MDL lis3mdl;
+Adafruit_LSM6DS33 lsm6ds;
+Adafruit_LIS3MDL lis3mdl;
 
 MotorGo::MotorGoPlink plink;
 MotorGo::MotorChannel& ch1 = plink.ch1;
@@ -35,49 +35,44 @@ void setup()
 {
   Serial.begin(115200);
 
-  //   delay(5000);
+  Wire1.begin(HIDDEN_SDA, HIDDEN_SCL, 400000);
 
-  //   Wire1.begin(HIDDEN_SDA, HIDDEN_SCL, 400000);
+  bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
+  bool lis3mdl_success = lis3mdl.begin_I2C(0x1C, &Wire1);
 
-  //   bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
-  //   bool lis3mdl_success = lis3mdl.begin_I2C(0x1C, &Wire1);
+  // Restart if IMU initialization fails
+  if (!lsm6ds_success || !lis3mdl_success)
+  {
+    Serial.println("IMU initialization failed, restarting!");
+    ESP.restart();
+  }
 
-  //   Restart if IMU initialization fails
-  //   if (!lsm6ds_success || !lis3mdl_success)
-  //   {
-  //     Serial.println("IMU initialization failed, restarting!");
-  //     ESP.restart();
-  //   }
+  lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
+  lsm6ds.setAccelDataRate(LSM6DS_RATE_208_HZ);
+  lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
+  lsm6ds.setGyroDataRate(LSM6DS_RATE_208_HZ);
 
-  //   lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
-  //   lsm6ds.setAccelDataRate(LSM6DS_RATE_208_HZ);
-  //   lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
-  //   lsm6ds.setGyroDataRate(LSM6DS_RATE_208_HZ);
+  lis3mdl.setPerformanceMode(LIS3MDL_ULTRAHIGHMODE);
+  lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
+  lis3mdl.setDataRate(LIS3MDL_DATARATE_300_HZ);
 
-  //   lis3mdl.setPerformanceMode(LIS3MDL_ULTRAHIGHMODE);
-  //   lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
-  //   lis3mdl.setDataRate(LIS3MDL_DATARATE_300_HZ);
+  lis3mdl.setIntThreshold(500);
+  lis3mdl.configInterrupt(false, false, true,  // enable z axis
+                          true,                // polarity
+                          false,               // don't latch
+                          true);               // enabled!
 
   slave.setDataMode(SPI_MODE0);    // default: SPI_MODE0
   slave.setQueueSize(QUEUE_SIZE);  // default: 1
 
-  // begin() after setting
   slave.begin(FSPI, SCK, MISO, MOSI, SS);
 
-  //   Serial.println(BUFFER_IN_SIZE);
+  Serial.println(BUFFER_IN_SIZE);
   Serial.println(BUFFER_OUT_SIZE);
 
   Serial.println("start spi slave");
 
   data_out.valid = false;
-  data_out.channel_1_pos = 1.0;
-  data_out.channel_1_vel = 2.0;
-  data_out.channel_2_pos = 3.0;
-  data_out.channel_2_vel = 4.0;
-  data_out.channel_3_pos = 5.0;
-  data_out.channel_3_vel = 6.0;
-  data_out.channel_4_pos = 7.0;
-  data_out.channel_4_vel = 8.0;
 
   plink.init();
 }
@@ -85,6 +80,10 @@ void setup()
 unsigned long last_data_time = 0;
 void loop()
 {
+  sensors_event_t accel, gyro, mag, temp;
+  lsm6ds.getEvent(&accel, &gyro, &temp);
+  lis3mdl.getEvent(&mag);
+
   data_out.channel_1_pos = ch1.get_position();
   data_out.channel_1_vel = ch1.get_velocity();
 
@@ -96,6 +95,14 @@ void loop()
 
   data_out.channel_4_pos = ch4.get_position();
   data_out.channel_4_vel = ch4.get_velocity();
+
+  data_out.gyro_x = gyro.gyro.x;
+  data_out.gyro_y = gyro.gyro.y;
+  data_out.gyro_z = gyro.gyro.z;
+
+  data_out.accel_x = accel.acceleration.x;
+  data_out.accel_y = accel.acceleration.y;
+  data_out.accel_z = accel.acceleration.z;
   data_out.valid = true;
 
   // Copy data to tx buffer

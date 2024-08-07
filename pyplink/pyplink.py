@@ -146,6 +146,63 @@ class MotorChannel:
         with self.lock:
             self._velocity = value
 
+class IMU:
+    def __init__(self):
+        """
+        Initialize the IMU with default values.
+        """
+        self.gyro_x = 0.0
+        self.gyro_y = 0.0
+        self.gyro_z = 0.0
+
+        self.accel_x = 0.0
+        self.accel_y = 0.0
+        self.accel_z = 0.0
+
+        self.lock = threading.Lock()
+
+    def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float):
+        """
+        Update the IMU data with the provided list.
+        """
+        with self.lock:
+            self.gyro_x = gyro_x
+            self.gyro_y = gyro_y
+            self.gyro_z = gyro_z
+
+            self.accel_x = accel_x
+            self.accel_y = accel_y
+            self.accel_z = accel_z
+    @property
+    def gyro(self) -> list:
+        """
+        Get the gyroscope data as a list.
+        """
+        with self.lock:
+            return [self.gyro_x, self.gyro_y, self.gyro_z]
+
+    @property
+    def accel(self) -> list:
+        """
+        Get the accelerometer data as a list.
+        """
+
+        with self.lock:
+            return [self.accel_x, self.accel_y, self.accel_z]
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the IMU data.
+        """
+        return (
+            f"IMU:\n"
+            f"Gyro X: {self.gyro_x}\n"
+            f"Gyro Y: {self.gyro_y}\n"
+            f"Gyro Z: {self.gyro_z}\n"
+            f"Accel X: {self.accel_x}\n"
+            f"Accel Y: {self.accel_y}\n"
+            f"Accel Z: {self.accel_z}\n"
+        )
 
 class OutputStruct:
     BUFFER_OUT_SIZE = 25
@@ -229,12 +286,13 @@ class OutputStruct:
 
 
 class InputStruct:
-    BUFFER_IN_SIZE = 33
+    BUFFER_IN_SIZE = 57
 
     def __init__(self, data: bytes = None):
         """
         Initialize the input structure and decode data if provided.
         """
+
         self.valid = False
         self.channel_1_pos = 0
         self.channel_1_vel = 0
@@ -245,6 +303,14 @@ class InputStruct:
         self.channel_4_pos = 0
         self.channel_4_vel = 0
 
+        self.gyro_x = 0
+        self.gyro_y = 0
+        self.gyro_z = 0
+
+        self.accel_x = 0
+        self.accel_y = 0
+        self.accel_z = 0
+
         if data is not None:
             self.decode(data)
 
@@ -254,7 +320,7 @@ class InputStruct:
         """
         data = bytearray(data)
 
-        unpacked_data = struct.unpack_from("<?8f", data)
+        unpacked_data = struct.unpack_from("<?14f", data)
         self.valid = unpacked_data[0]
         self.channel_1_pos = unpacked_data[1]
         self.channel_1_vel = unpacked_data[2]
@@ -264,6 +330,13 @@ class InputStruct:
         self.channel_3_vel = unpacked_data[6]
         self.channel_4_pos = unpacked_data[7]
         self.channel_4_vel = unpacked_data[8]
+
+        self.gyro_x = unpacked_data[9]
+        self.gyro_y = unpacked_data[10]
+        self.gyro_z = unpacked_data[11]
+        self.accel_x = unpacked_data[12]
+        self.accel_y = unpacked_data[13]
+        self.accel_z = unpacked_data[14]
 
     def __str__(self) -> str:
         """
@@ -300,6 +373,8 @@ class Plink:
         self.channel2 = MotorChannel()
         self.channel3 = MotorChannel()
         self.channel4 = MotorChannel()
+
+        self.imu = IMU()
 
         self.frequency = frequency
         self.timeout = timeout
@@ -340,6 +415,16 @@ class Plink:
 
         self.channel4.update_position(response.channel_4_pos)
         self.channel4.update_velocity(response.channel_4_vel)
+
+        # Update the IMU data
+        self.imu.update(
+            response.gyro_x,
+            response.gyro_y,
+            response.gyro_z,
+            response.accel_x,
+            response.accel_y,
+            response.accel_z,
+        )
 
     def transfer(self):
         """
