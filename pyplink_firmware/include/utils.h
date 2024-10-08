@@ -44,6 +44,10 @@ union data_out_t
     float accel_x;
     float accel_y;
     float accel_z;
+
+    float mag_x;
+    float mag_y;
+    float mag_z;
   };
 
   uint8_t raw[BUFFER_OUT_SIZE];

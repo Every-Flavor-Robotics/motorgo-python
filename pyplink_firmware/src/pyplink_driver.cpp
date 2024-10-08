@@ -35,6 +35,8 @@ void setup()
 {
   Serial.begin(115200);
 
+  delay(5000);
+
   Wire1.begin(HIDDEN_SDA, HIDDEN_SCL, 400000);
 
   bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
@@ -103,6 +105,11 @@ void loop()
   data_out.accel_x = accel.acceleration.x;
   data_out.accel_y = accel.acceleration.y;
   data_out.accel_z = accel.acceleration.z;
+
+  data_out.mag_x = mag.magnetic.x;
+  data_out.mag_y = mag.magnetic.y;
+  data_out.mag_z = mag.magnetic.z;
+
   data_out.valid = true;
 
   // Copy data to tx buffer
@@ -118,27 +125,27 @@ void loop()
     memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
 
     // Use freq_println to print the data at a specific frequency
-    //   String str_out = "data_in: ";
-    //   str_out += "valid: ";
-    //   str_out += data_in.valid;
-    //   str_out += "\nchannel_1_brake_mode: ";
-    //   str_out += (int)data_in.channel_1_brake_mode;
-    //   str_out += "\nchannel_2_brake_mode: ";
-    //   str_out += (int)data_in.channel_2_brake_mode;
-    //   str_out += "\nchannel_3_brake_mode: ";
-    //   str_out += (int)data_in.channel_3_brake_mode;
-    //   str_out += "\nchannel_4_brake_mode: ";
-    //   str_out += (int)data_in.channel_4_brake_mode;
-    //   str_out += "\nchannel_1_command: ";
-    //   str_out += data_in.channel_1_command;
-    //   str_out += "\nchannel_2_command: ";
-    //   str_out += data_in.channel_2_command;
-    //   str_out += "\nchannel_3_command: ";
-    //   str_out += data_in.channel_3_command;
-    //   str_out += "\nchannel_4_command: ";
-    //   str_out += data_in.channel_4_command;
+    // String str_out = "data_in: ";
+    // str_out += "valid: ";
+    // str_out += data_in.valid;
+    // str_out += "\nchannel_1_brake_mode: ";
+    // str_out += (int)data_in.channel_1_brake_mode;
+    // str_out += "\nchannel_2_brake_mode: ";
+    // str_out += (int)data_in.channel_2_brake_mode;
+    // str_out += "\nchannel_3_brake_mode: ";
+    // str_out += (int)data_in.channel_3_brake_mode;
+    // str_out += "\nchannel_4_brake_mode: ";
+    // str_out += (int)data_in.channel_4_brake_mode;
+    // str_out += "\nchannel_1_command: ";
+    // str_out += data_in.channel_1_command;
+    // str_out += "\nchannel_2_command: ";
+    // str_out += data_in.channel_2_command;
+    // str_out += "\nchannel_3_command: ";
+    // str_out += data_in.channel_3_command;
+    // str_out += "\nchannel_4_command: ";
+    // str_out += data_in.channel_4_command;
 
-    //   freq_println(str_out, 10);
+    // freq_println(str_out, 10);
 
     if (data_in.valid)
     {
@@ -195,5 +202,5 @@ void loop()
     ch4.set_power(0);
   }
 
-  delay(2);
+  //   delay(2);
 }
