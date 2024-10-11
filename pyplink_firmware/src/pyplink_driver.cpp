@@ -31,6 +31,7 @@ data_out_t data_out;
 data_in_t data_in;
 
 ESP32SPISlave slave;
+
 void setup()
 {
   Serial.begin(115200);
@@ -38,6 +39,13 @@ void setup()
   delay(5000);
 
   Wire1.begin(HIDDEN_SDA, HIDDEN_SCL, 400000);
+
+  //   Initialize rx and tx buffers
+  for (size_t i = 0; i < BUFFER_SIZE; i++)
+  {
+    tx_buf[i] = 0;
+    rx_buf[i] = 0;
+  }
 
   bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
   bool lis3mdl_success = lis3mdl.begin_I2C(0x1C, &Wire1);
@@ -112,11 +120,16 @@ void loop()
 
   data_out.valid = true;
 
-  // Copy data to tx buffer
   memcpy(tx_buf, data_out.raw, BUFFER_OUT_SIZE);
+  //   Fill the rest of the buffer with 0s
+  for (size_t i = BUFFER_OUT_SIZE; i < BUFFER_SIZE; i++)
+  {
+    tx_buf[i] = 0;
+  }
 
-  const size_t received_bytes =
-      slave.transfer(tx_buf, rx_buf, BUFFER_SIZE, 100);
+  const size_t received_bytes = slave.transfer(tx_buf, rx_buf, 72, 1000);
+
+  //   freq_println("received_bytes: " + String(received_bytes), 1);
 
   if (received_bytes != 0)
   {
@@ -125,27 +138,27 @@ void loop()
     memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
 
     // Use freq_println to print the data at a specific frequency
-    // String str_out = "data_in: ";
-    // str_out += "valid: ";
-    // str_out += data_in.valid;
-    // str_out += "\nchannel_1_brake_mode: ";
-    // str_out += (int)data_in.channel_1_brake_mode;
-    // str_out += "\nchannel_2_brake_mode: ";
-    // str_out += (int)data_in.channel_2_brake_mode;
-    // str_out += "\nchannel_3_brake_mode: ";
-    // str_out += (int)data_in.channel_3_brake_mode;
-    // str_out += "\nchannel_4_brake_mode: ";
-    // str_out += (int)data_in.channel_4_brake_mode;
-    // str_out += "\nchannel_1_command: ";
-    // str_out += data_in.channel_1_command;
-    // str_out += "\nchannel_2_command: ";
-    // str_out += data_in.channel_2_command;
-    // str_out += "\nchannel_3_command: ";
-    // str_out += data_in.channel_3_command;
-    // str_out += "\nchannel_4_command: ";
-    // str_out += data_in.channel_4_command;
+    String str_out = "data_in: ";
+    str_out += "valid: ";
+    str_out += data_in.valid;
+    str_out += "\nchannel_1_brake_mode: ";
+    str_out += (int)data_in.channel_1_brake_mode;
+    str_out += "\nchannel_2_brake_mode: ";
+    str_out += (int)data_in.channel_2_brake_mode;
+    str_out += "\nchannel_3_brake_mode: ";
+    str_out += (int)data_in.channel_3_brake_mode;
+    str_out += "\nchannel_4_brake_mode: ";
+    str_out += (int)data_in.channel_4_brake_mode;
+    str_out += "\nchannel_1_command: ";
+    str_out += data_in.channel_1_command;
+    str_out += "\nchannel_2_command: ";
+    str_out += data_in.channel_2_command;
+    str_out += "\nchannel_3_command: ";
+    str_out += data_in.channel_3_command;
+    str_out += "\nchannel_4_command: ";
+    str_out += data_in.channel_4_command;
 
-    // freq_println(str_out, 10);
+    freq_println(str_out, 10);
 
     if (data_in.valid)
     {

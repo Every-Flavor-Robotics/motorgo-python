@@ -14,8 +14,7 @@ void freq_println(String str, int freq)
   }
 }
 
-#define BUFFER_OUT_SIZE 57
-
+#define BUFFER_OUT_SIZE sizeof(float) * 17 + sizeof(bool)
 union data_out_t
 {
   struct __attribute__((packed))
@@ -95,7 +94,7 @@ union data_in_t
   uint8_t raw[BUFFER_IN_SIZE];
 };
 
-#define BUFFER_SIZE 64
+#define BUFFER_SIZE 96
 
 void print_data_in(const data_in_t &data)
 {
