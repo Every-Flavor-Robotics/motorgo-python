@@ -159,9 +159,13 @@ class IMU:
         self.accel_y = 0.0
         self.accel_z = 0.0
 
+        self.mag_x = 0.0
+        self.mag_y = 0.0
+        self.mag_z = 0.0
+
         self.lock = threading.Lock()
 
-    def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float):
+    def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float, mag_x: float, mag_y: float, mag_z: float):
         """
         Update the IMU data with the provided list.
         """
@@ -173,6 +177,11 @@ class IMU:
             self.accel_x = accel_x
             self.accel_y = accel_y
             self.accel_z = accel_z
+
+            self.mag_x = mag_x
+            self.mag_y = mag_y
+            self.mag_z = mag_z
+
     @property
     def gyro(self) -> list:
         """
@@ -190,6 +199,14 @@ class IMU:
         with self.lock:
             return [self.accel_x, self.accel_y, self.accel_z]
 
+    @property
+    def mag(self) -> list:
+        """
+        Get the magnetometer data as a list.
+        """
+        with self.lock:
+            return [self.mag_x, self.mag_y, self.mag_z]
+
     def __str__(self) -> str:
         """
         Return a string representation of the IMU data.
@@ -202,6 +219,9 @@ class IMU:
             f"Accel X: {self.accel_x}\n"
             f"Accel Y: {self.accel_y}\n"
             f"Accel Z: {self.accel_z}\n"
+            f"Mag X: {self.mag_x}\n"
+            f"Mag Y: {self.mag_y}\n"
+            f"Mag Z: {self.mag_z}\n"
         )
 
 class OutputStruct:
@@ -311,6 +331,10 @@ class InputStruct:
         self.accel_y = 0
         self.accel_z = 0
 
+        self.mag_x = 0
+        self.mag_y = 0
+        self.mag_z = 0
+
         if data is not None:
             self.decode(data)
 
@@ -337,6 +361,9 @@ class InputStruct:
         self.accel_x = unpacked_data[12]
         self.accel_y = unpacked_data[13]
         self.accel_z = unpacked_data[14]
+        self.mag_x = unpacked_data[6]
+        self.mag_y = unpacked_data[7]
+        self.mag_z = unpacked_data[8]
 
     def __str__(self) -> str:
         """
@@ -424,6 +451,9 @@ class Plink:
             response.accel_x,
             response.accel_y,
             response.accel_z,
+            response.mag_x,
+            response.mag_y,
+            response.mag_z,
         )
 
     def transfer(self):

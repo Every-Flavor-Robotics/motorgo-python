@@ -103,6 +103,11 @@ void loop()
   data_out.accel_x = accel.acceleration.x;
   data_out.accel_y = accel.acceleration.y;
   data_out.accel_z = accel.acceleration.z;
+
+  data_out.channel_3_vel = mag.magnetic.x;
+  data_out.channel_4_pos = mag.magnetic.y;
+  data_out.channel_4_vel = mag.magnetic.z;
+
   data_out.valid = true;
 
   // Copy data to tx buffer
