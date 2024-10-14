@@ -4,6 +4,7 @@ import struct
 import threading
 import atexit
 import imufusion
+import numpy as np
 
 
 # Enums to match C++ definitions
