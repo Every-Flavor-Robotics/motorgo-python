@@ -487,6 +487,7 @@ class Plink:
             response.accel_x,
             response.accel_y,
             response.accel_z,
+            self.frequency,
         )
 
     def transfer(self):
