@@ -171,6 +171,8 @@ class IMU:
 
         self.ahrs = imufusion.Ahrs()
 
+        self.calibration_complete = False
+
     def calibrate(self):
         """
         Calibrate the IMU, finding the mean of the gyro data.
@@ -193,10 +195,9 @@ class IMU:
             gyro_z_sum / 1000,
         ]
 
+        print(self.gyro_mean)
 
-
-
-
+        self.calibration_complete = True
 
     def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float, mag_x: float, mag_y: float, mag_z: float, frequency):
         """
@@ -228,7 +229,8 @@ class IMU:
             accel[1] = self.accel_y
             accel[2] = self.accel_z
 
-        self.ahrs.update_no_magnetometer(gyro, accel, 1/frequency)
+        if self.calibration_complete:
+            self.ahrs.update_no_magnetometer(gyro, accel, 1/frequency)
 
     @property
     def gyro(self) -> list:
