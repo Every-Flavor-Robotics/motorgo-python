@@ -202,6 +202,10 @@ class IMU:
         """
         Update the IMU data with the provided list.
         """
+
+        gyro = np.zeros(3)
+        accel = np.zeros(3)
+
         with self.lock:
             self.gyro_x = gyro_x - self.gyro_mean[0]
             self.gyro_y = gyro_y - self.gyro_mean[1]
@@ -215,7 +219,16 @@ class IMU:
             self.mag_y = mag_y
             self.mag_z = mag_z
 
-        self.ahrs.update_no_magnetometer(np.array(gyro_x), np.array(gyro_y), np.array(gyro_z), np.array(accel_x), np.array(accel_y), np.array(accel_z), 1/frequency)
+            # Collect data for AHRS update
+            gyro[0] = self.gyro_x
+            gyro[1] = self.gyro_y
+            gyro[2] = self.gyro_z
+
+            accel[0] = self.accel_x
+            accel[1] = self.accel_y
+            accel[2] = self.accel_z
+
+        self.ahrs.update_no_magnetometer(gyro, accel, 1/frequency)
 
     @property
     def gyro(self) -> list:
@@ -248,7 +261,7 @@ class IMU:
         Get the gravity vector from the AHRS.
         """
 
-        return self.ahrs.gravity_vector
+        return self.ahrs.gravity
 
     def __str__(self) -> str:
         """
