@@ -3,6 +3,7 @@ import time
 import struct
 import threading
 import atexit
+import imufusion
 
 
 # Enums to match C++ definitions
@@ -165,7 +166,10 @@ class IMU:
 
         self.lock = threading.Lock()
 
-    def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float, mag_x: float, mag_y: float, mag_z: float):
+        self.ahrs = imufusion.Ahrs()
+
+
+    def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float, mag_x: float, mag_y: float, mag_z: float, frequency):
         """
         Update the IMU data with the provided list.
         """
@@ -181,6 +185,8 @@ class IMU:
             self.mag_x = mag_x
             self.mag_y = mag_y
             self.mag_z = mag_z
+
+        self.ahrs.update_no_magnetometer(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, 1/frequency)
 
     @property
     def gyro(self) -> list:
@@ -206,6 +212,14 @@ class IMU:
         """
         with self.lock:
             return [self.mag_x, self.mag_y, self.mag_z]
+
+    @property
+    def gravity_vector(self) -> list:
+        """
+        Get the gravity vector from the AHRS.
+        """
+
+        return self.ahrs.gravity_vector
 
     def __str__(self) -> str:
         """
@@ -454,6 +468,7 @@ class Plink:
             response.mag_x,
             response.mag_y,
             response.mag_z,
+            self.frequency
         )
 
     def transfer(self):

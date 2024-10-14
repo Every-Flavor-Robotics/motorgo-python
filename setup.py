@@ -6,6 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'spidev',
+        'imufusion'
     ],
     entry_points={},
     author='Swapnil Pande',
