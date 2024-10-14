@@ -164,9 +164,37 @@ class IMU:
         self.mag_y = 0.0
         self.mag_z = 0.0
 
+        self.gyro_mean = [0.0, 0.0, 0.0]
+
         self.lock = threading.Lock()
 
         self.ahrs = imufusion.Ahrs()
+
+    def calibrate(self):
+        """
+        Calibrate the IMU, finding the mean of the gyro data.
+        """
+
+        gyro_x_sum = 0
+        gyro_y_sum = 0
+        gyro_z_sum = 0
+
+        print("Calibrating IMU, please keep the device still ...")
+        for _ in range(1000):
+            with self.lock:
+                gyro_x_sum += self.gyro_x
+                gyro_y_sum += self.gyro_y
+                gyro_z_sum += self.gyro_z
+
+        self.gyro_mean = [
+            gyro_x_sum / 1000,
+            gyro_y_sum / 1000,
+            gyro_z_sum / 1000,
+        ]
+
+
+
+
 
 
     def update(self, gyro_x: float, gyro_y: float, gyro_z: float, accel_x: float, accel_y: float, accel_z: float, mag_x: float, mag_y: float, mag_z: float, frequency):
@@ -174,9 +202,9 @@ class IMU:
         Update the IMU data with the provided list.
         """
         with self.lock:
-            self.gyro_x = gyro_x
-            self.gyro_y = gyro_y
-            self.gyro_z = gyro_z
+            self.gyro_x = gyro_x - self.gyro_mean[0]
+            self.gyro_y = gyro_y - self.gyro_mean[1]
+            self.gyro_z = gyro_z - self.gyro_mean[2]
 
             self.accel_x = accel_x
             self.accel_y = accel_y
@@ -436,6 +464,12 @@ class Plink:
         self.thread = threading.Thread(target=self.comms_thread)
         self.thread.daemon = True  # Set the thread as a daemon thread
         self.thread.start()
+
+    def calibrate_imu(self):
+        """
+        Calibrate the IMU.
+        """
+        self.imu.calibrate()
 
     def update_motor_states(self, response: InputStruct):
         """
