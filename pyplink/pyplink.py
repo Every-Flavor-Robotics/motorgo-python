@@ -251,6 +251,13 @@ class IMU:
         Get the gravity vector calculated by the AHRS.
         """
 
+        if not self.calibration_complete:
+            # Print warning in red
+            print(
+                "\033[91mWarning: IMU not calibrated, gravity vector is not being computed!\033[0m"
+            )
+            return np.zeros(3)
+
         return self.ahrs.gravity_vector
 
     def __str__(self) -> str:
@@ -458,6 +465,12 @@ class Plink:
         self.thread = threading.Thread(target=self.comms_thread)
         self.thread.daemon = True  # Set the thread as a daemon thread
         self.thread.start()
+
+    def calibrate_imu(self):
+        """
+        Calibrate the IMU by finding the mean of the gyro data.
+        """
+        self.imu.calibrate()
 
     def update_motor_states(self, response: InputStruct):
         """
