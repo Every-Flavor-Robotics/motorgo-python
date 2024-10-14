@@ -214,7 +214,7 @@ class IMU:
             self.mag_y = mag_y
             self.mag_z = mag_z
 
-        self.ahrs.update_no_magnetometer(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, 1/frequency)
+        self.ahrs.update_no_magnetometer(np.array(gyro_x), np.array(gyro_y), np.array(gyro_z), np.array(accel_x), np.array(accel_y), np.array(accel_z), 1/frequency)
 
     @property
     def gyro(self) -> list:
