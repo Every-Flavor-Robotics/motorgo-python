@@ -454,6 +454,7 @@ class Plink:
         self.timeout = timeout
 
         self.running = False
+        self.connected = False
 
         self.transfer_size = max(
             OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE
@@ -474,6 +475,10 @@ class Plink:
         """
         Calibrate the IMU by finding the mean of the gyro data.
         """
+        # Wait until Plink is connected
+        while not self.connected:
+            print("Waiting for connection before calibration ...")
+            time.sleep(0.1)
         self.imu.calibrate()
 
     def update_motor_states(self, response: InputStruct):
@@ -526,6 +531,7 @@ class Plink:
 
             if self.last_message_time is None:
                 print("Connection established!")
+                self.connected = True
 
             self.last_message_time = time.time()
 
@@ -543,6 +549,7 @@ class Plink:
                 if self.last_message_time is not None:
                     if time.time() - self.last_message_time > self.timeout:
                         print("No response from SPI device")
+                        self.connected = False
                         break
 
                 # Sleep for the remainder of the cycle
