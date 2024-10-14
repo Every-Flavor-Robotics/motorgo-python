@@ -184,6 +184,8 @@ class IMU:
                 gyro_y_sum += self.gyro_y
                 gyro_z_sum += self.gyro_z
 
+            time.sleep(0.01)
+
         self.gyro_mean = [
             gyro_x_sum / 1000,
             gyro_y_sum / 1000,
