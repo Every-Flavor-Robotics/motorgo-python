@@ -258,7 +258,7 @@ class IMU:
             )
             return np.zeros(3)
 
-        return self.ahrs.gravity_vector
+        return self.ahrs.gravity
 
     def __str__(self) -> str:
         """
