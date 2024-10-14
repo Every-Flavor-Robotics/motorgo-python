@@ -192,6 +192,8 @@ class IMU:
             gyro_z_sum / 1000,
         ]
 
+        print("IMU calibration complete!")
+
         self.calibration_complete = True
 
     def update(
