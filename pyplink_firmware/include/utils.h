@@ -14,8 +14,7 @@ void freq_println(String str, int freq)
   }
 }
 
-#define BUFFER_OUT_SIZE 57
-
+#define BUFFER_OUT_SIZE 69
 union data_out_t
 {
   struct __attribute__((packed))
@@ -44,6 +43,10 @@ union data_out_t
     float accel_x;
     float accel_y;
     float accel_z;
+
+    float mag_x;
+    float mag_y;
+    float mag_z;
   };
 
   uint8_t raw[BUFFER_OUT_SIZE];
@@ -91,7 +94,9 @@ union data_in_t
   uint8_t raw[BUFFER_IN_SIZE];
 };
 
-#define BUFFER_SIZE 64
+// Buffer out size is 69 bytes, pad with 4 bytes for DMA driver, and then
+// round up to the nearest multiple of 4
+#define BUFFER_SIZE (76)
 
 void print_data_in(const data_in_t &data)
 {
