@@ -364,7 +364,7 @@ class OutputStruct:
 
 
 class InputStruct:
-    BUFFER_IN_SIZE = 57
+    BUFFER_IN_SIZE = 69
 
     def __init__(self, data: bytes = None):
         """
@@ -402,7 +402,7 @@ class InputStruct:
         """
         data = bytearray(data)
 
-        unpacked_data = struct.unpack_from("<?14f", data)
+        unpacked_data = struct.unpack_from("<?17f", data)
         self.valid = unpacked_data[0]
         self.channel_1_pos = unpacked_data[1]
         self.channel_1_vel = unpacked_data[2]
@@ -419,9 +419,9 @@ class InputStruct:
         self.accel_x = unpacked_data[12]
         self.accel_y = unpacked_data[13]
         self.accel_z = unpacked_data[14]
-        self.mag_x = unpacked_data[6]
-        self.mag_y = unpacked_data[7]
-        self.mag_z = unpacked_data[8]
+        self.mag_x = unpacked_data[15]
+        self.mag_y = unpacked_data[16]
+        self.mag_z = unpacked_data[17]
 
     def __str__(self) -> str:
         """
@@ -466,9 +466,11 @@ class Plink:
 
         self.running = False
 
+        # Add an extra 4 bytes at the end for padding
+        # esp32 slave has a bug that requires this
         self.transfer_size = max(
             OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE
-        )
+        ) + 4
 
     def connect(self):
         """
