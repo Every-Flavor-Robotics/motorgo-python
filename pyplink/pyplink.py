@@ -172,6 +172,14 @@ class IMU:
         self.lock = threading.Lock()
 
         self.ahrs = imufusion.Ahrs()
+        self.ahrs.settings = imufusion.Settings(
+            imufusion.CONVENTION_NWU,  # convention
+            0.9,  # gain
+            2000,  # gyroscope range
+            10,  # acceleration rejection
+            10,  # magnetic rejection
+            5 * sample_rate,  # recovery trigger period = 5 seconds
+        )
 
         self.calibration_complete = False
 
