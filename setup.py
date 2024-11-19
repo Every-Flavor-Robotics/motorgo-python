@@ -4,12 +4,7 @@ setup(
     name="motorgo-python",
     version="0.1.0",
     packages=find_packages(),
-    install_requires=[
-        "spidev",
-        "gpiozero",
-        "RPi.GPIO",
-        "numpy",
-    ],
+    install_requires=["spidev", "gpiozero", "RPi.GPIO", "numpy", "imufusion"],
     entry_points={},
     author="Swapnil Pande",
     author_email="swapnil@everyflavor.bot",
