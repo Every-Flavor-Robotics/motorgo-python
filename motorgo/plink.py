@@ -3,316 +3,12 @@ import struct
 import threading
 import time
 
-import imufusion
-import numpy as np
 import spidev
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 
-
-# Enums to match C++ definitions
-class ControlMode:
-    VELOCITY = 0
-    POWER = 1
-
-
-class BrakeMode:
-    BRAKE = 0
-    COAST = 1
-
-
-class MotorChannel:
-    def __init__(self):
-        """
-        Initialize the MotorChannel with default control and brake modes.
-        """
-        self.lock = threading.Lock()
-
-        self.control_mode = ControlMode.POWER
-        self.brake_mode = BrakeMode.BRAKE
-
-        # Variables to store current commands
-        self._velocity_command = 0.0
-        self._power_command = 0.0
-
-        self._position = 0.0
-        self._velocity = 0.0
-
-    @property
-    def velocity_command(self) -> float:
-        """
-        Get the velocity command with thread-safe access.
-        """
-        with self.lock:
-            return self._velocity_command
-
-    @velocity_command.setter
-    def velocity_command(self, value: float):
-        """
-        Set the velocity command with thread-safe access and mode check.
-        """
-        with self.lock:
-            if self._control_mode != ControlMode.VELOCITY:
-                print(
-                    "Warning: Setting velocity command with control mode set to power."
-                )
-            self._velocity_command = value
-
-    @property
-    def power_command(self) -> float:
-        """
-        Get the power command with thread-safe access.
-        """
-        with self.lock:
-            return self._power_command
-
-    @power_command.setter
-    def power_command(self, value: float):
-        """
-        Set the power command with thread-safe access and mode check.
-        """
-        with self.lock:
-            if self._control_mode != ControlMode.POWER:
-                print(
-                    "Warning: Setting power command with control mode set to velocity."
-                )
-            self._power_command = value
-
-    @property
-    def control_mode(self) -> int:
-        """
-        Get the control mode with thread-safe access.
-        """
-        with self.lock:
-            return self._control_mode
-
-    @control_mode.setter
-    def control_mode(self, value: int):
-        """
-        Set the control mode with thread-safe access.
-        """
-        with self.lock:
-            self._control_mode = value
-
-    @property
-    def brake_mode(self) -> int:
-        """
-        Get the brake mode with thread-safe access.
-        """
-        with self.lock:
-            return self._brake_mode
-
-    @brake_mode.setter
-    def brake_mode(self, value: int):
-        """
-        Set the brake mode with thread-safe access.
-        """
-        with self.lock:
-            self._brake_mode = value
-
-    @property
-    def command(self) -> float:
-        """
-        Get the command based on the current control mode.
-        """
-        return (
-            self.velocity_command
-            if self.control_mode == ControlMode.VELOCITY
-            else self.power_command
-        )
-
-    @property
-    def position(self) -> float:
-        """
-        Get the position with thread-safe access.
-        """
-        with self.lock:
-            return self._position
-
-    def update_position(self, value: float):
-        """
-        Update the position with thread-safe access.
-        """
-        with self.lock:
-            self._position = value
-
-    @property
-    def velocity(self) -> float:
-        """
-        Get the velocity with thread-safe access.
-        """
-        with self.lock:
-            return self._velocity
-
-    def update_velocity(self, value: float):
-        """
-        Update the velocity with thread-safe access.
-        """
-        with self.lock:
-            self._velocity = value
-
-
-class IMU:
-    def __init__(self):
-        """
-        Initialize the IMU with default values.
-        """
-        self.gyro_x = 0.0
-        self.gyro_y = 0.0
-        self.gyro_z = 0.0
-
-        self.accel_x = 0.0
-        self.accel_y = 0.0
-        self.accel_z = 0.0
-
-        self.mag_x = 0.0
-        self.mag_y = 0.0
-        self.mag_z = 0.0
-
-        self.gyro_mean = [0.0, 0.0, 0.0]
-
-        self.lock = threading.Lock()
-
-        self.ahrs = imufusion.Ahrs()
-        # self.ahrs.settings = imufusion.Settings(
-        #     imufusion.CONVENTION_NWU,  # convention
-        #     0.9,  # gain
-        #     2000,  # gyroscope range
-        #     10,  # acceleration rejection
-        #     10,  # magnetic rejection
-        #     5 * sample_rate,  # recovery trigger period = 5 seconds
-        # )
-
-        self.calibration_complete = False
-
-    def calibrate(self):
-        """
-        Calibrate the IMU, finding the mean of the gyro data.
-        """
-
-        gyro_x_sum = 0
-        gyro_y_sum = 0
-        gyro_z_sum = 0
-
-        print("Calibrating IMU, do not move the Plink!")
-        for _ in range(1000):
-            with self.lock:
-                gyro_x_sum += self.gyro_x
-                gyro_y_sum += self.gyro_y
-                gyro_z_sum += self.gyro_z
-
-            time.sleep(0.01)
-
-        self.gyro_mean = [
-            gyro_x_sum / 1000,
-            gyro_y_sum / 1000,
-            gyro_z_sum / 1000,
-        ]
-
-        print("IMU calibration complete!")
-
-        self.calibration_complete = True
-
-    def update(
-        self,
-        gyro_x: float,
-        gyro_y: float,
-        gyro_z: float,
-        accel_x: float,
-        accel_y: float,
-        accel_z: float,
-        mag_x: float,
-        mag_y: float,
-        mag_z: float,
-        frequency: float,
-    ):
-        """
-        Update the IMU data with the provided list.
-        """
-
-        gyro_np = np.zeros(3)
-        accel_np = np.zeros(3)
-
-        with self.lock:
-            self.gyro_x = gyro_x - self.gyro_mean[0]
-            self.gyro_y = gyro_y - self.gyro_mean[1]
-            self.gyro_z = gyro_z - self.gyro_mean[2]
-
-            self.accel_x = accel_x
-            self.accel_y = accel_y
-            self.accel_z = accel_z
-
-            self.mag_x = mag_x
-            self.mag_y = mag_y
-            self.mag_z = mag_z
-
-            # Collect data for AHRS update
-            gyro_np[0] = gyro_x
-            gyro_np[1] = gyro_y
-            gyro_np[2] = gyro_z
-
-            accel_np[0] = accel_x
-            accel_np[1] = accel_y
-            accel_np[2] = accel_z
-
-        if self.calibration_complete:
-            self.ahrs.update_no_magnetometer(gyro_np, accel_np, 1 / frequency)
-
-    @property
-    def gyro(self) -> list:
-        """
-        Get the gyroscope data as a list.
-        """
-        with self.lock:
-            return [self.gyro_x, self.gyro_y, self.gyro_z]
-
-    @property
-    def accel(self) -> list:
-        """
-        Get the accelerometer data as a list.
-        """
-
-        with self.lock:
-            return [self.accel_x, self.accel_y, self.accel_z]
-
-    @property
-    def mag(self) -> list:
-        """
-        Get the magnetometer data as a list.
-        """
-        with self.lock:
-            return [self.mag_x, self.mag_y, self.mag_z]
-
-    @property
-    def gravity_vector(self) -> np.ndarray:
-        """
-        Get the gravity vector calculated by the AHRS.
-        """
-
-        if not self.calibration_complete:
-            # Print warning in red
-            print(
-                "\033[91mWarning: IMU not calibrated, gravity vector is not being computed!\033[0m"
-            )
-            return np.zeros(3)
-
-        return self.ahrs.gravity
-
-    def __str__(self) -> str:
-        """
-        Return a string representation of the IMU data.
-        """
-        return (
-            f"IMU:\n"
-            f"Gyro X: {self.gyro_x}\n"
-            f"Gyro Y: {self.gyro_y}\n"
-            f"Gyro Z: {self.gyro_z}\n"
-            f"Accel X: {self.accel_x}\n"
-            f"Accel Y: {self.accel_y}\n"
-            f"Accel Z: {self.accel_z}\n"
-            f"Mag X: {self.mag_x}\n"
-            f"Mag Y: {self.mag_y}\n"
-            f"Mag Z: {self.mag_z}\n"
-        )
+from .common import InitInputStruct, InitOutputStruct
+from .imu import IMU
+from .motor_channel import BrakeMode, ControlMode, MotorChannel
 
 
 class OutputStruct:
@@ -521,11 +217,20 @@ class Plink:
         """
         atexit.register(self.shutdown)  # Register cleanup function
 
-        print("Resetting")
-
         # Reset the Plink
         self.reset()
 
+        init_response = self.transfer_init()
+
+        # Confirm that the response is correct
+        if init_response.valid:
+            # TODO: Validate that the response is correct
+            print("Connection established!")
+
+            self.last_message_time = time.time()
+            self.connected = True
+
+        # Start the communication thread
         self.running = True
         self.thread = threading.Thread(target=self.comms_thread)
         self.thread.daemon = True  # Set the thread as a daemon thread
@@ -575,6 +280,24 @@ class Plink:
             self.frequency,
         )
 
+    def transfer_init(self):
+        """Prepare and send the initialization data."""
+        # Prepare data from current state
+        data = InitOutputStruct(self.frequency)
+
+        # Wait for the data ready pin to be active
+        self.data_ready_pin.wait_for_active()
+        time.sleep(0.0001)
+
+        # Send data and receive response (Mock response for now)
+        response = InitInputStruct(
+            self.spi.xfer2(data.get_packed_struct(self.transfer_size))
+        )
+
+        response.decode()
+
+        return response
+
     def transfer(self):
         """
         Prepare and send data, then receive and process the response.
@@ -584,6 +307,7 @@ class Plink:
         data.valid = True
 
         self.data_ready_pin.wait_for_active()
+        time.sleep(0.0001)
 
         # Send data and receive response (Mock response for now)
         response = InputStruct(
@@ -593,11 +317,6 @@ class Plink:
         # Update the motor states
         if response.valid:
             self.update_motor_states(response)
-
-            if self.last_message_time is None:
-                print("Connection established!")
-                self.connected = True
-
             self.last_message_time = time.time()
 
     def comms_thread(self):
