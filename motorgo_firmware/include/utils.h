@@ -94,6 +94,36 @@ union data_in_t
   uint8_t raw[BUFFER_IN_SIZE];
 };
 
+#define INIT_IN_SIZE 5
+union init_input_t
+{
+  struct __attribute__((packed))
+  {
+    // Whether the data is valid
+    bool valid = false;
+
+    // Target update frequency
+    float frequency;
+  };
+
+  uint8_t raw[INIT_IN_SIZE];
+};
+
+#define INIT_OUT_SIZE 3
+union init_output_t
+{
+  struct __attribute__((packed))
+  {
+    // Whether the data is valid
+    bool valid = false;
+
+    int board_id;
+    int firmware_version;
+  };
+
+  uint8_t raw[INIT_OUT_SIZE];
+};
+
 // Buffer out size is 69 bytes, pad with 4 bytes for DMA driver, and then
 // round up to the nearest multiple of 4
 #define BUFFER_SIZE (76)

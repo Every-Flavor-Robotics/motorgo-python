@@ -35,6 +35,54 @@ data_in_t data_in;
 
 ESP32DMASPI::Slave slave;
 
+// Time to delay between data transmissions
+unsigned long delay_time = 0;
+
+void init_spi_comms()
+{
+  bool ready = false;
+  //   Prepare the initialize data
+  init_output_t init_out;
+  init_out.valid = true;
+  init_out.board_id = 1;
+  init_out.firmware_version = 1;
+
+  while (!ready)
+  {
+    // Copy data to tx buffer
+    memcpy(tx_buf, init_out.raw, INIT_OUT_SIZE);
+
+    //  Indicate that data is ready
+    digitalWrite(DATA_READY, HIGH);
+
+    //  Send the data
+    const size_t received_bytes = slave.transfer(tx_buf, rx_buf, BUFFER_SIZE);
+
+    //  Indicate that data is not ready
+    digitalWrite(DATA_READY, LOW);
+
+    init_input_t init_in;
+    if (received_bytes != 0)
+    {
+      // Decode data into data_in_t
+      memcpy(init_in.raw, rx_buf, INIT_IN_SIZE);
+
+      if (init_in.valid)
+      {
+        ready = true;
+
+        if (init_in.frequency == 0)
+        {
+          init_in.frequency = 1;
+          delay_time = 1e6 / init_in.frequency;
+        }
+      }
+    }
+  }
+
+  Serial.println("SPI communication initialized");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -105,9 +153,12 @@ void setup()
   data_out.valid = false;
 
   plink.init();
+
+  init_spi_comms();
 }
 
 unsigned long last_data_time = 0;
+unsigned long last_loop_time = 0;
 void loop()
 {
   sensors_event_t accel, gyro, mag, temp;
@@ -251,5 +302,13 @@ void loop()
     ch4.set_power(0);
   }
 
-  delayMicroseconds(100);
+  unsigned long current_time = micros();
+  unsigned long loop_duration = current_time - last_loop_time;
+  last_loop_time = current_time;
+
+  unsigned long corrected_delay_time = delay_time - loop_duration;
+  if (delay_time > 0)
+  {
+    delayMicroseconds(corrected_delay_time);
+  }
 }
