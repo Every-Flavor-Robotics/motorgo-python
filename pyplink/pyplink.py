@@ -6,7 +6,7 @@ import time
 import imufusion
 import numpy as np
 import spidev
-from gpiozero import DigitalInputDevice
+from gpiozero import DigitalInputDevice, DigitalOutputDevice
 
 
 # Enums to match C++ definitions
@@ -507,12 +507,24 @@ class Plink:
         # )
 
         self.data_ready_pin = DigitalInputDevice(25)
+        self.reset_pin = DigitalOutputDevice(22, active_high=False, initial_value=False)
+
+    def reset(self):
+        """
+        Reset the Plink by toggling the reset pin.
+        """
+        self.reset_pin.blink(on_time=0.1, off_time=0.1, n=1)
 
     def connect(self):
         """
         Start the communication thread.
         """
         atexit.register(self.shutdown)  # Register cleanup function
+
+        print("Resetting")
+
+        # Reset the Plink
+        self.reset()
 
         self.running = True
         self.thread = threading.Thread(target=self.comms_thread)
@@ -623,6 +635,8 @@ class Plink:
         Clean up resources and perform shutdown tasks.
         """
         self.running = False
+
+        self.reset()
 
         print("Disconnecting from Plink ...")
         # Close the SPI connection
