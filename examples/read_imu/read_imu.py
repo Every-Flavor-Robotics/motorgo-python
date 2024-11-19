@@ -3,8 +3,9 @@
 # connected to the Raspberry Pi and that it has been flashed with the
 # PyPlink firmware.
 
-from pyplink import Plink
 import time
+
+from pyplink import Plink
 
 
 def main():
