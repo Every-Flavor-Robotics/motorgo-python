@@ -6,6 +6,7 @@ import time
 import imufusion
 import numpy as np
 import spidev
+from gpiozero import DigitalInputDevice
 
 
 # Enums to match C++ definitions
@@ -474,14 +475,14 @@ class InputStruct:
 
 class Plink:
 
-    def __init__(self, frequency: int = 100, timeout: float = 1.0):
+    def __init__(self, frequency: int = 200, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
         self.spi = spidev.SpiDev()
         self.spi.open(0, 0)  # Open bus 0, device (CS) 0
-        self.spi.mode = 0
-        self.spi.max_speed_hz = 50000  # Set SPI speed
+        self.spi.mode = 3
+        self.spi.max_speed_hz = 7_100_000  # Set SPI speed
 
         self.last_message_time = None
 
@@ -500,9 +501,12 @@ class Plink:
 
         # Add an extra 4 bytes at the end for padding
         # esp32 slave has a bug that requires this
-        self.transfer_size = (
-            max(OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE) + 4
-        )
+        self.transfer_size = 76
+        # (
+        #     max(OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE) + 4
+        # )
+
+        self.data_ready_pin = DigitalInputDevice(25)
 
     def connect(self):
         """
@@ -566,6 +570,8 @@ class Plink:
         # Prepare data from current state
         data = OutputStruct(self.channel1, self.channel2, self.channel3, self.channel4)
         data.valid = True
+
+        self.data_ready_pin.wait_for_active()
 
         # Send data and receive response (Mock response for now)
         response = InputStruct(
