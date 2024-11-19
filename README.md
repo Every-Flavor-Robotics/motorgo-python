@@ -1,6 +1,6 @@
-# pyplink
+# MotorGo Python
 
-A Python package for motor control using SPI communication. This package is designed to work with the MotorGo Plink connected to a Raspberry Pi and flashed with the MotorGo firmware.
+The official Python API for controlling PiHat-compatible MotorGo boards from the Raspberry Pi.
 
 ## Installation
 
