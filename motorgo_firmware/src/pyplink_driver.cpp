@@ -119,9 +119,9 @@ void setup()
   }
 
   lsm6ds.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
-  lsm6ds.setAccelDataRate(LSM6DS_RATE_208_HZ);
+  lsm6ds.setAccelDataRate(LSM6DS_RATE_416_HZ);
   lsm6ds.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
-  lsm6ds.setGyroDataRate(LSM6DS_RATE_208_HZ);
+  lsm6ds.setGyroDataRate(LSM6DS_RATE_416_HZ);
 
   lis3mdl.setPerformanceMode(LIS3MDL_ULTRAHIGHMODE);
   lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
