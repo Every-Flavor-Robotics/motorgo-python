@@ -319,13 +319,16 @@ class Plink:
             self.update_motor_states(response)
             self.last_message_time = time.time()
 
+        # wait for data ready pin to go low
+        self.data_ready_pin.wait_for_inactive()
+
     def comms_thread(self):
         """
         Communication thread to handle periodic data transfer.
         """
         try:
             while self.running:
-                start = time.time()
+                # start = time.time()
                 # Send the message
                 self.transfer()
 
@@ -335,11 +338,6 @@ class Plink:
                         print("No response from SPI device")
                         self.connected = False
                         break
-
-                # Sleep for the remainder of the cycle
-                delta = time.time() - start
-                sleep_time = 1.0 / self.frequency - delta
-                time.sleep(sleep_time if sleep_time > 0 else 0)
 
         except KeyboardInterrupt:
             # Handle keyboard interrupt (Ctrl+C)

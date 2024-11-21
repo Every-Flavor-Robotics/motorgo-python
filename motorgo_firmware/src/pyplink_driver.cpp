@@ -14,10 +14,10 @@ Adafruit_LSM6DS3TRC lsm6ds;
 Adafruit_LIS3MDL lis3mdl;
 
 MotorGo::MotorGoPlink plink;
-MotorGo::MotorChannel& ch1 = plink.ch1;
-MotorGo::MotorChannel& ch2 = plink.ch2;
-MotorGo::MotorChannel& ch3 = plink.ch3;
-MotorGo::MotorChannel& ch4 = plink.ch4;
+MotorGo::MotorChannel &ch1 = plink.ch1;
+MotorGo::MotorChannel &ch2 = plink.ch2;
+MotorGo::MotorChannel &ch3 = plink.ch3;
+MotorGo::MotorChannel &ch4 = plink.ch4;
 
 #define MOSI 35
 #define MISO 48
@@ -27,8 +27,8 @@ MotorGo::MotorChannel& ch4 = plink.ch4;
 #define DATA_READY 36
 
 static constexpr size_t QUEUE_SIZE = 1;
-uint8_t* tx_buf;
-uint8_t* rx_buf;
+uint8_t *tx_buf;
+uint8_t *rx_buf;
 
 data_out_t data_out;
 data_in_t data_in;
@@ -37,6 +37,8 @@ ESP32DMASPI::Slave slave;
 
 // Time to delay between data transmissions
 unsigned long delay_time = 0;
+unsigned long last_data_time = 0;
+unsigned long loop_start_time = 0;
 
 void init_spi_comms()
 {
@@ -74,11 +76,15 @@ void init_spi_comms()
         if (init_in.frequency == 0)
         {
           init_in.frequency = 1;
-          delay_time = 1e6 / init_in.frequency;
         }
+
+        // Delay time in microseconds
+        delay_time = 1000000 / init_in.frequency;
       }
     }
   }
+
+  loop_start_time = micros();
 
   Serial.println("SPI communication initialized");
 }
@@ -157,8 +163,6 @@ void setup()
   init_spi_comms();
 }
 
-unsigned long last_data_time = 0;
-unsigned long last_loop_time = 0;
 void loop()
 {
   sensors_event_t accel, gyro, mag, temp;
@@ -302,13 +306,20 @@ void loop()
     ch4.set_power(0);
   }
 
-  unsigned long current_time = micros();
-  unsigned long loop_duration = current_time - last_loop_time;
-  last_loop_time = current_time;
+  //   Print target frequency
 
-  unsigned long corrected_delay_time = delay_time - loop_duration;
-  if (delay_time > 0)
+  unsigned long loop_duration = micros() - loop_start_time;
+  unsigned long corrected_delay_time = 0;
+  if (loop_duration > delay_time)
   {
-    delayMicroseconds(corrected_delay_time);
+    Serial.println("Loop duration exceeded delay time");
   }
+  else
+  {
+    corrected_delay_time = delay_time - loop_duration;
+  }
+
+  delayMicroseconds(corrected_delay_time);
+
+  loop_start_time = micros();
 }
