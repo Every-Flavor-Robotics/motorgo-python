@@ -56,8 +56,6 @@ class InitInputStruct:
     def decode(self):
         data = bytearray(self.data)[: self.SIZE]
 
-        print(len(data))
-
         # Unpack two ints from the data
         self.valid, board_id, firmware_version = struct.unpack("<?BB", data)
 
