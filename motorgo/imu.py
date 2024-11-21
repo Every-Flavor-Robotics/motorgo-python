@@ -6,7 +6,7 @@ import numpy as np
 
 
 class IMU:
-    def __init__(self):
+    def __init__(self, frequency):
         """
         Initialize the IMU with default values.
         """
@@ -22,49 +22,22 @@ class IMU:
         self.mag_y = 0.0
         self.mag_z = 0.0
 
-        self.gyro_mean = [0.0, 0.0, 0.0]
+        self.frequency = frequency
 
         self.lock = threading.Lock()
 
         self.ahrs = imufusion.Ahrs()
         self.ahrs.settings = imufusion.Settings(
             imufusion.CONVENTION_NWU,  # convention
-            0.9,  # gain
+            2.0,  # gain
             2000,  # gyroscope range
             10,  # acceleration rejection
-            10,  # magnetic rejection
-            5 * 200,  # recovery trigger period = 5 seconds
+            0,  # magnetic rejection
+            self.frequency * 5,  # recovery trigger period = 5 seconds
         )
 
-        self.calibration_complete = False
-
-    def calibrate(self):
-        """
-        Calibrate the IMU, finding the mean of the gyro data.
-        """
-
-        gyro_x_sum = 0
-        gyro_y_sum = 0
-        gyro_z_sum = 0
-
-        print("Calibrating IMU, do not move the Plink!")
-        for _ in range(1000):
-            with self.lock:
-                gyro_x_sum += self.gyro_x
-                gyro_y_sum += self.gyro_y
-                gyro_z_sum += self.gyro_z
-
-            time.sleep(0.01)
-
-        self.gyro_mean = [
-            gyro_x_sum / 1000,
-            gyro_y_sum / 1000,
-            gyro_z_sum / 1000,
-        ]
-
-        print("IMU calibration complete!")
-
-        self.calibration_complete = True
+        self.offset = imufusion.Offset(self.frequency)
+        self.last_update_time = None
 
     def update(
         self,
@@ -87,9 +60,9 @@ class IMU:
         accel_np = np.zeros(3)
 
         with self.lock:
-            self.gyro_x = gyro_x - self.gyro_mean[0]
-            self.gyro_y = gyro_y - self.gyro_mean[1]
-            self.gyro_z = gyro_z - self.gyro_mean[2]
+            self.gyro_x = gyro_x  # - self.gyro_mean[0]
+            self.gyro_y = gyro_y  # - self.gyro_mean[1]
+            self.gyro_z = gyro_z  # - self.gyro_mean[2]
 
             self.accel_x = accel_x
             self.accel_y = accel_y
@@ -100,16 +73,22 @@ class IMU:
             self.mag_z = mag_z
 
             # Collect data for AHRS update
-            gyro_np[0] = gyro_x
-            gyro_np[1] = gyro_y
-            gyro_np[2] = gyro_z
+            gyro_np[0] = self.gyro_x
+            gyro_np[1] = self.gyro_y
+            gyro_np[2] = self.gyro_z
 
-            accel_np[0] = accel_x
-            accel_np[1] = accel_y
-            accel_np[2] = accel_z
+            accel_np[0] = self.accel_x
+            accel_np[1] = self.accel_y
+            accel_np[2] = self.accel_z
 
-        if self.calibration_complete:
-            self.ahrs.update_no_magnetometer(gyro_np, accel_np, 1 / frequency)
+        if self.last_update_time is not None:
+            dt = time.time() - self.last_update_time
+
+        else:
+            dt = 1 / frequency
+
+        gyro_np = self.offset.update(gyro_np)
+        self.ahrs.update_no_magnetometer(gyro_np, accel_np, dt)
 
     @property
     def gyro(self) -> list:
@@ -141,13 +120,6 @@ class IMU:
         """
         Get the gravity vector calculated by the AHRS.
         """
-
-        if not self.calibration_complete:
-            # Print warning in red
-            print(
-                "\033[91mWarning: IMU not calibrated, gravity vector is not being computed!\033[0m"
-            )
-            return np.zeros(3)
 
         return self.ahrs.gravity
 

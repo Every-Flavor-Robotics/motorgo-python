@@ -171,7 +171,7 @@ class InputStruct:
 
 class Plink:
 
-    def __init__(self, frequency: int = 200, timeout: float = 1.0):
+    def __init__(self, frequency: int = 300, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
@@ -187,8 +187,6 @@ class Plink:
         self.channel3 = MotorChannel()
         self.channel4 = MotorChannel()
 
-        self.imu = IMU()
-
         self.frequency = frequency
         self.timeout = timeout
 
@@ -198,9 +196,8 @@ class Plink:
         # Add an extra 4 bytes at the end for padding
         # esp32 slave has a bug that requires this
         self.transfer_size = 76
-        # (
-        #     max(OutputStruct.BUFFER_OUT_SIZE, InputStruct.BUFFER_IN_SIZE) + 4
-        # )
+
+        self.imu = IMU(self.frequency)
 
         self.data_ready_pin = DigitalInputDevice(25)
         self.reset_pin = DigitalOutputDevice(22, active_high=False, initial_value=False)
@@ -235,16 +232,6 @@ class Plink:
         self.thread = threading.Thread(target=self.comms_thread)
         self.thread.daemon = True  # Set the thread as a daemon thread
         self.thread.start()
-
-    def calibrate_imu(self):
-        """
-        Calibrate the IMU by finding the mean of the gyro data.
-        """
-        # Wait until Plink is connected
-        while not self.connected:
-            print("Waiting for connection before calibration ...")
-            time.sleep(0.1)
-        self.imu.calibrate()
 
     def update_motor_states(self, response: InputStruct):
         """
