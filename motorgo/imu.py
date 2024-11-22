@@ -6,21 +6,13 @@ import numpy as np
 
 
 class IMU:
-    def __init__(self, frequency):
+    def __init__(self, frequency, mag_enabled=False):
         """
         Initialize the IMU with default values.
         """
-        self.gyro_x = 0.0
-        self.gyro_y = 0.0
-        self.gyro_z = 0.0
-
-        self.accel_x = 0.0
-        self.accel_y = 0.0
-        self.accel_z = 0.0
-
-        self.mag_x = 0.0
-        self.mag_y = 0.0
-        self.mag_z = 0.0
+        self.gyro_state = np.array([0.0, 0.0, 0.0])
+        self.accel_state = np.array([0.0, 0.0, 0.0])
+        self.mag_state = np.array([0.0, 0.0, 0.0])
 
         self.frequency = frequency
 
@@ -39,6 +31,8 @@ class IMU:
         self.offset = imufusion.Offset(self.frequency)
         self.last_update_time = None
 
+        self.mag_enabled = mag_enabled
+
     def update(
         self,
         gyro_x: float,
@@ -50,70 +44,63 @@ class IMU:
         mag_x: float,
         mag_y: float,
         mag_z: float,
-        frequency: float,
     ):
         """
         Update the IMU data with the provided list.
         """
 
-        gyro_np = np.zeros(3)
-        accel_np = np.zeros(3)
+        self._update(
+            np.array([gyro_x, gyro_y, gyro_z]),
+            np.array([accel_x, accel_y, accel_z]),
+            np.array([mag_x, mag_y, mag_z]),
+        )
 
+    def _update(self, gyro: np.ndarray, accel: np.ndarray, mag: np.ndarray):
+
+        gyro = self.offset.update(gyro)
+
+        # Update internal state
         with self.lock:
-            self.gyro_x = gyro_x  # - self.gyro_mean[0]
-            self.gyro_y = gyro_y  # - self.gyro_mean[1]
-            self.gyro_z = gyro_z  # - self.gyro_mean[2]
+            self.gyro_state = gyro
+            self.accel_state = accel
+            self.mag_state = mag
 
-            self.accel_x = accel_x
-            self.accel_y = accel_y
-            self.accel_z = accel_z
-
-            self.mag_x = mag_x
-            self.mag_y = mag_y
-            self.mag_z = mag_z
-
-            # Collect data for AHRS update
-            gyro_np[0] = self.gyro_x
-            gyro_np[1] = self.gyro_y
-            gyro_np[2] = self.gyro_z
-
-            accel_np[0] = self.accel_x
-            accel_np[1] = self.accel_y
-            accel_np[2] = self.accel_z
-
+        #  Get the time delta, just use 1/frequency if no last update time
         if self.last_update_time is not None:
             dt = time.time() - self.last_update_time
-
         else:
-            dt = 1 / frequency
+            dt = 1 / self.frequency
+        self.last_update_time = time.time()
 
-        gyro_np = self.offset.update(gyro_np)
-        self.ahrs.update_no_magnetometer(gyro_np, accel_np, dt)
-
-    @property
-    def gyro(self) -> list:
-        """
-        Get the gyroscope data as a list.
-        """
-        with self.lock:
-            return [self.gyro_x, self.gyro_y, self.gyro_z]
+        if self.mag_enabled:
+            self.ahrs.update(gyro, accel, mag, dt)
+        else:
+            self.ahrs.update_no_magnetometer(gyro, accel, dt)
 
     @property
-    def accel(self) -> list:
+    def gyro(self) -> np.ndarray:
         """
-        Get the accelerometer data as a list.
+        Get the gyroscope data as an np.ndarray.
         """
-
         with self.lock:
-            return [self.accel_x, self.accel_y, self.accel_z]
+            return self.gyro_state
 
     @property
-    def mag(self) -> list:
+    def accel(self) -> np.ndarray:
         """
-        Get the magnetometer data as a list.
+        Get the accelerometer data as a np.ndarray.
+        """
+
+        with self.lock:
+            return self.accel_state
+
+    @property
+    def mag(self) -> np.ndarray:
+        """
+        Get the magnetometer data as a np.ndarray.
         """
         with self.lock:
-            return [self.mag_x, self.mag_y, self.mag_z]
+            return self.mag_state
 
     @property
     def gravity_vector(self) -> np.ndarray:
