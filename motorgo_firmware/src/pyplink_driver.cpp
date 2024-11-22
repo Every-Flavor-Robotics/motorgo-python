@@ -46,8 +46,8 @@ void init_spi_comms()
 
   //   Prepare the initialize data
   init_output_t init_out;
-  init_out.board_id = 1;
-  init_out.firmware_version = 1;
+  init_out.board_id = 0x03;
+  init_out.firmware_version = VERSION_HASH;
 
   while (!ready)
   {
@@ -62,12 +62,15 @@ void init_spi_comms()
 
     //  Indicate that data is not ready
     digitalWrite(DATA_READY, LOW);
+    delay(100);
 
     init_input_t init_in;
     if (received_bytes != 0)
     {
       // Decode data into data_in_t
       memcpy(init_in.raw, rx_buf, INIT_IN_SIZE);
+
+      Serial.println(init_in.message_type);
 
       if (init_in.message_type == INIT_MESSAGE_TYPE)
       {
