@@ -14,13 +14,13 @@ void freq_println(String str, int freq)
   }
 }
 
+#define DATA_MESSAGE_TYPE 0x02
 #define BUFFER_OUT_SIZE 69
 union data_out_t
 {
   struct __attribute__((packed))
   {
-    // Whether the data is valid
-    bool valid = false;
+    uint8_t message_type = DATA_MESSAGE_TYPE;
 
     // Encoder data from all 4 channels
     float channel_1_pos;
@@ -69,8 +69,7 @@ union data_in_t
 {
   struct __attribute__((packed))
   {
-    // Whether the data is valid
-    bool valid = false;
+    uint8_t message_type = DATA_MESSAGE_TYPE;
 
     // Motor data for all 4 channels
     float channel_1_command;
@@ -94,13 +93,13 @@ union data_in_t
   uint8_t raw[BUFFER_IN_SIZE];
 };
 
+#define INIT_MESSAGE_TYPE 0x01
 #define INIT_IN_SIZE 5
 union init_input_t
 {
   struct __attribute__((packed))
   {
-    // Whether the data is valid
-    bool valid = false;
+    uint8_t message_type = INIT_MESSAGE_TYPE;
 
     // Target update frequency
     float frequency;
@@ -109,16 +108,15 @@ union init_input_t
   uint8_t raw[INIT_IN_SIZE];
 };
 
-#define INIT_OUT_SIZE 3
+#define INIT_OUT_SIZE 4
 union init_output_t
 {
   struct __attribute__((packed))
   {
-    // Whether the data is valid
-    bool valid = false;
+    uint8_t message_type = INIT_MESSAGE_TYPE;
 
-    int board_id;
-    int firmware_version;
+    uint16_t board_id;
+    uint8_t firmware_version;
   };
 
   uint8_t raw[INIT_OUT_SIZE];
@@ -132,7 +130,7 @@ void print_data_in(const data_in_t &data)
 {
   String output = "";
 
-  output += "Valid: " + String(data.valid) + "\n";
+  output += "Message type: " + String(data.message_type) + "\n";
 
   output += "Channel 1 Command: " + String(data.channel_1_command) + "\n";
   output += "Channel 1 Control Mode: " +

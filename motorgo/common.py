@@ -8,11 +8,13 @@ class InitOutputStruct:
     """A class representing the data that is sent to the motor controller to initialize the motor controller
 
     The struct contains:
-    - valid (bool)
+    - message_type (int)
     - Target Frequency (float)
     """
 
     SIZE = 5
+    # Type 0x01
+    TYPE = 0x01
 
     def __init__(self, target_frequency: float):
         self.target_frequency = target_frequency
@@ -22,8 +24,8 @@ class InitOutputStruct:
         Pack the structure data into bytes for transmission.
         """
         packed = struct.pack(
-            "<?f",
-            True,
+            "<Bf",
+            self.TYPE,
             self.target_frequency,
         )
 
@@ -40,11 +42,13 @@ class InitInputStruct:
 
     The struct contains:
     - valid (bool)
-    - board id (int)
-    - firmware version (int)
+    - board id (int 16 bit)
+    - firmware version (int 8 bit)
     """
 
-    SIZE = 3
+    SIZE = 4
+    # Type 0x01
+    TYPE = 0x01
 
     def __init__(self, data: bytes):
         self.data = data
@@ -57,7 +61,9 @@ class InitInputStruct:
         data = bytearray(self.data)[: self.SIZE]
 
         # Unpack two ints from the data
-        self.valid, board_id, firmware_version = struct.unpack("<?BB", data)
+        message_type, board_id, firmware_version = struct.unpack("<BHB", data)
+
+        self.valid = message_type == self.TYPE
 
         if self.valid:
             self.board_id = board_id

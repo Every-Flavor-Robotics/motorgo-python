@@ -45,7 +45,6 @@ void init_spi_comms()
   bool ready = false;
   //   Prepare the initialize data
   init_output_t init_out;
-  init_out.valid = true;
   init_out.board_id = 1;
   init_out.firmware_version = 1;
 
@@ -69,7 +68,7 @@ void init_spi_comms()
       // Decode data into data_in_t
       memcpy(init_in.raw, rx_buf, INIT_IN_SIZE);
 
-      if (init_in.valid)
+      if (init_in.message_type == INIT_MESSAGE_TYPE)
       {
         ready = true;
 
@@ -156,8 +155,6 @@ void setup()
 
   Serial.println("start spi slave");
 
-  data_out.valid = false;
-
   plink.init();
 
   init_spi_comms();
@@ -192,8 +189,6 @@ void loop()
   data_out.mag_x = (float)WiFi.RSSI();
   data_out.mag_y = 0;
   data_out.mag_z = 0;
-
-  data_out.valid = true;
 
   //   Print imu data
   //   String str_out = "imu: ";
@@ -251,7 +246,7 @@ void loop()
 
     // freq_println(str_out, 10);
 
-    if (data_in.valid)
+    if (data_in.message_type == DATA_MESSAGE_TYPE)
     {
       if (data_in.channel_1_brake_mode == BrakeMode::BRAKE)
       {

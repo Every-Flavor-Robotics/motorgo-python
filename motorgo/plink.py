@@ -13,6 +13,7 @@ from .motor_channel import BrakeMode, ControlMode, MotorChannel
 
 class OutputStruct:
     BUFFER_OUT_SIZE = 25
+    TYPE = 0x02
 
     def __init__(
         self,
@@ -46,8 +47,8 @@ class OutputStruct:
         Pack the structure data into bytes for transmission.
         """
         packed = struct.pack(
-            "<?4f8B",
-            True,
+            "<B4f8B",
+            self.TYPE,
             self.channel_1_command,
             self.channel_2_command,
             self.channel_3_command,
@@ -93,6 +94,7 @@ class OutputStruct:
 
 class InputStruct:
     BUFFER_IN_SIZE = 69
+    TYPE = 0x02
 
     def __init__(self, data: bytes = None):
         """
@@ -130,8 +132,8 @@ class InputStruct:
         """
         data = bytearray(data)
 
-        unpacked_data = struct.unpack_from("<?17f", data)
-        self.valid = unpacked_data[0]
+        unpacked_data = struct.unpack_from("<B17f", data)
+        self.valid = unpacked_data[0] == self.TYPE
         self.channel_1_pos = unpacked_data[1]
         self.channel_1_vel = unpacked_data[2]
         self.channel_2_pos = unpacked_data[3]
