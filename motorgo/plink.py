@@ -6,6 +6,7 @@ import time
 import spidev
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 
+from .common import crc16
 from .imu import IMU
 from .message_parser import MessageParser
 from .messages import (
@@ -19,9 +20,12 @@ from .messages import (
     MessageToPeri,
 )
 from .motor_channel import BrakeMode, ControlMode, MotorChannel
+from .version import __version__
 
 
 class Plink:
+
+    SUPPORTED_BOARD_IDS = [0x03]
 
     def __init__(self, frequency: int = 200, timeout: float = 1.0):
         """
@@ -69,13 +73,17 @@ class Plink:
         # Reset the Plink
         self.reset()
 
-        self.initialize_comms()
+        connect_success = self.initialize_comms()
 
-        # Start the communication thread
-        self.running = True
-        self.thread = threading.Thread(target=self.comms_thread)
-        self.thread.daemon = True  # Set the thread as a daemon thread
-        self.thread.start()
+        if connect_success:
+            # Start the communication thread
+            self.running = True
+            self.thread = threading.Thread(target=self.comms_thread)
+            self.thread.daemon = True  # Set the thread as a daemon thread
+            self.thread.start()
+
+        else:
+            print("Not starting connection to protect MotorGo")
 
     def update_motor_states(self, response: DataFromPeri):
         """
@@ -131,9 +139,19 @@ class Plink:
                 print("Received initialization response")
                 initialized = True
 
-        # TODO: Confirm that the response is correct
+        valid = True
 
-        return response
+        # TODO: Confirm that the response is correct
+        expected_version = crc16(__version__.encode())
+        if response.version_hash != expected_version:
+            print("Invalid version received")
+            valid = False
+
+        if response.board_id not in self.SUPPORTED_BOARD_IDS:
+            print("Unsupported board ID received")
+            valid = False
+
+        return valid
 
     def transfer(self, message: MessageToPeri) -> MessageFromPeri:
         """

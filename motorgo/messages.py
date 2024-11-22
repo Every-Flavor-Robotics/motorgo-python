@@ -139,7 +139,7 @@ class InitFromPeri(MessageFromPeri):
     - firmware version (int 8 bit)
     """
 
-    SIZE = 4
+    SIZE = 5
     # Type 0x01
     TYPE = 0x01
 
@@ -148,19 +148,19 @@ class InitFromPeri(MessageFromPeri):
 
         self.valid = False
         self.board_id = None
-        self.firmware_version = None
+        self.version_hash = None
 
     def decode(self):
         data = bytearray(self.data)[: self.SIZE]
 
         # Unpack two ints from the data
-        message_type, board_id, firmware_version = struct.unpack("<BHB", data)
+        message_type, board_id, version_hash = struct.unpack("<B2H", data)
 
         self.valid = message_type == self.TYPE
 
         if self.valid:
             self.board_id = board_id
-            self.firmware_version = firmware_version
+            self.version_hash = version_hash
 
     def __str__(self):
         return f"Board ID: {self.board_id}, Firmware Version: {self.firmware_version}"
