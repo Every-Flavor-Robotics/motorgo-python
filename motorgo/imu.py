@@ -31,7 +31,7 @@ class IMU:
             imufusion.CONVENTION_NWU,  # convention
             2.0,  # gain
             2000,  # gyroscope range
-            10,  # acceleration rejection
+            0,  # acceleration rejection
             0,  # magnetic rejection
             self.frequency * 5,  # recovery trigger period = 5 seconds
         )
