@@ -133,6 +133,7 @@ class InputStruct:
         data = bytearray(data)
 
         unpacked_data = struct.unpack_from("<B17f", data)
+
         self.valid = unpacked_data[0] == self.TYPE
         self.channel_1_pos = unpacked_data[1]
         self.channel_1_vel = unpacked_data[2]
@@ -173,14 +174,14 @@ class InputStruct:
 
 class Plink:
 
-    def __init__(self, frequency: int = 300, timeout: float = 1.0):
+    def __init__(self, frequency: int = 200, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
         self.spi = spidev.SpiDev()
         self.spi.open(0, 0)  # Open bus 0, device (CS) 0
         self.spi.mode = 3
-        self.spi.max_speed_hz = 7_100_000  # Set SPI speed
+        self.spi.max_speed_hz = 7_200_000  # Set SPI speed
 
         self.last_message_time = None
 
@@ -266,7 +267,6 @@ class Plink:
             response.mag_x,
             response.mag_y,
             response.mag_z,
-            self.frequency,
         )
 
     def transfer_init(self):
@@ -276,7 +276,7 @@ class Plink:
 
         # Wait for the data ready pin to be active
         self.data_ready_pin.wait_for_active()
-        time.sleep(0.0001)
+        # time.sleep(0.00001)
 
         # Send data and receive response (Mock response for now)
         response = InitInputStruct(
@@ -296,7 +296,6 @@ class Plink:
         data.valid = True
 
         self.data_ready_pin.wait_for_active()
-        time.sleep(0.0001)
 
         # Send data and receive response (Mock response for now)
         response = InputStruct(
