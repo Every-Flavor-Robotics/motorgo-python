@@ -108,7 +108,7 @@ union init_input_t
   uint8_t raw[INIT_IN_SIZE];
 };
 
-#define INIT_OUT_SIZE 4
+#define INIT_OUT_SIZE 5
 union init_output_t
 {
   struct __attribute__((packed))
@@ -116,7 +116,7 @@ union init_output_t
     uint8_t message_type = INIT_MESSAGE_TYPE;
 
     uint16_t board_id;
-    uint8_t firmware_version;
+    uint16_t firmware_version;
   };
 
   uint8_t raw[INIT_OUT_SIZE];
