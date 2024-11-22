@@ -6,170 +6,19 @@ import time
 import spidev
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 
-from .common import InitInputStruct, InitOutputStruct
 from .imu import IMU
+from .message_parser import MessageParser
+from .messages import (
+    DataFromPeri,
+    DataToPeri,
+    InitFromPeri,
+    InitToPeri,
+    InvalidFromPeri,
+    InvalidToPeri,
+    MessageFromPeri,
+    MessageToPeri,
+)
 from .motor_channel import BrakeMode, ControlMode, MotorChannel
-
-
-class OutputStruct:
-    BUFFER_OUT_SIZE = 25
-    TYPE = 0x02
-
-    def __init__(
-        self,
-        channel1: MotorChannel,
-        channel2: MotorChannel,
-        channel3: MotorChannel,
-        channel4: MotorChannel,
-    ):
-        """
-        Initialize the output structure with motor channels' commands and modes.
-        """
-        self.valid = False
-
-        self.channel_1_command = channel1.command
-        self.channel_2_command = channel2.command
-        self.channel_3_command = channel3.command
-        self.channel_4_command = channel4.command
-
-        self.channel_1_control_mode = channel1.control_mode
-        self.channel_2_control_mode = channel2.control_mode
-        self.channel_3_control_mode = channel3.control_mode
-        self.channel_4_control_mode = channel4.control_mode
-
-        self.channel_1_brake_mode = channel1.brake_mode
-        self.channel_2_brake_mode = channel2.brake_mode
-        self.channel_3_brake_mode = channel3.brake_mode
-        self.channel_4_brake_mode = channel4.brake_mode
-
-    def get_packed_struct(self, output_size=None) -> bytes:
-        """
-        Pack the structure data into bytes for transmission.
-        """
-        packed = struct.pack(
-            "<B4f8B",
-            self.TYPE,
-            self.channel_1_command,
-            self.channel_2_command,
-            self.channel_3_command,
-            self.channel_4_command,
-            self.channel_1_control_mode,
-            self.channel_2_control_mode,
-            self.channel_3_control_mode,
-            self.channel_4_control_mode,
-            self.channel_1_brake_mode,
-            self.channel_2_brake_mode,
-            self.channel_3_brake_mode,
-            self.channel_4_brake_mode,
-        )
-
-        assert len(packed) == self.BUFFER_OUT_SIZE
-
-        if output_size is not None and output_size > len(packed):
-            return packed + b"\x00" * (output_size - len(packed))
-
-        return packed
-
-    def __str__(self) -> str:
-        """
-        Return a string representation of the output structure.
-        """
-        return (
-            f"OutputStruct:\n"
-            f"Valid: {self.valid}\n"
-            f"Channel 1 Command: {self.channel_1_command}\n"
-            f"Channel 2 Command: {self.channel_2_command}\n"
-            f"Channel 3 Command: {self.channel_3_command}\n"
-            f"Channel 4 Command: {self.channel_4_command}\n"
-            f"Channel 1 Control Mode: {self.channel_1_control_mode}\n"
-            f"Channel 2 Control Mode: {self.channel_2_control_mode}\n"
-            f"Channel 3 Control Mode: {self.channel_3_control_mode}\n"
-            f"Channel 4 Control Mode: {self.channel_4_control_mode}\n"
-            f"Channel 1 Brake Mode: {self.channel_1_brake_mode}\n"
-            f"Channel 2 Brake Mode: {self.channel_2_brake_mode}\n"
-            f"Channel 3 Brake Mode: {self.channel_3_brake_mode}\n"
-            f"Channel 4 Brake Mode: {self.channel_4_brake_mode}\n"
-        )
-
-
-class InputStruct:
-    BUFFER_IN_SIZE = 69
-    TYPE = 0x02
-
-    def __init__(self, data: bytes = None):
-        """
-        Initialize the input structure and decode data if provided.
-        """
-
-        self.valid = False
-        self.channel_1_pos = 0
-        self.channel_1_vel = 0
-        self.channel_2_pos = 0
-        self.channel_2_vel = 0
-        self.channel_3_pos = 0
-        self.channel_3_vel = 0
-        self.channel_4_pos = 0
-        self.channel_4_vel = 0
-
-        self.gyro_x = 0
-        self.gyro_y = 0
-        self.gyro_z = 0
-
-        self.accel_x = 0
-        self.accel_y = 0
-        self.accel_z = 0
-
-        self.mag_x = 0
-        self.mag_y = 0
-        self.mag_z = 0
-
-        if data is not None:
-            self.decode(data)
-
-    def decode(self, data: list):
-        """
-        Decode the input data into the structure fields.
-        """
-        data = bytearray(data)
-
-        unpacked_data = struct.unpack_from("<B17f", data)
-
-        self.valid = unpacked_data[0] == self.TYPE
-        self.channel_1_pos = unpacked_data[1]
-        self.channel_1_vel = unpacked_data[2]
-        self.channel_2_pos = unpacked_data[3]
-        self.channel_2_vel = unpacked_data[4]
-        self.channel_3_pos = unpacked_data[5]
-        self.channel_3_vel = unpacked_data[6]
-        self.channel_4_pos = unpacked_data[7]
-        self.channel_4_vel = unpacked_data[8]
-
-        self.gyro_x = unpacked_data[9]
-        self.gyro_y = unpacked_data[10]
-        self.gyro_z = unpacked_data[11]
-        self.accel_x = unpacked_data[12]
-        self.accel_y = unpacked_data[13]
-        self.accel_z = unpacked_data[14]
-        self.mag_x = unpacked_data[15]
-        self.mag_y = unpacked_data[16]
-        self.mag_z = unpacked_data[17]
-
-    def __str__(self) -> str:
-        """
-        Return a string representation of the input structure.
-        """
-        return (
-            f"InputStruct:\n"
-            f"Valid: {self.valid}\n"
-            f"Channel 1 Position: {self.channel_1_pos}\n"
-            f"Channel 1 Velocity: {self.channel_1_vel}\n"
-            f"Channel 2 Position: {self.channel_2_pos}\n"
-            f"Channel 2 Velocity: {self.channel_2_vel}\n"
-            f"Channel 3 Position: {self.channel_3_pos}\n"
-            f"Channel 3 Velocity: {self.channel_3_vel}\n"
-            f"Channel 4 Position: {self.channel_4_pos}\n"
-            f"Channel 4 Velocity: {self.channel_4_vel}\n"
-        )
 
 
 class Plink:
@@ -209,7 +58,7 @@ class Plink:
         """
         Reset the Plink by toggling the reset pin.
         """
-        self.reset_pin.blink(on_time=0.1, off_time=0.1, n=1)
+        self.reset_pin.blink(on_time=0.05, off_time=0.05, n=1)
 
     def connect(self):
         """
@@ -220,15 +69,7 @@ class Plink:
         # Reset the Plink
         self.reset()
 
-        init_response = self.transfer_init()
-
-        # Confirm that the response is correct
-        if init_response.valid:
-            # TODO: Validate that the response is correct
-            print("Connection established!")
-
-            self.last_message_time = time.time()
-            self.connected = True
+        self.initialize_comms()
 
         # Start the communication thread
         self.running = True
@@ -236,7 +77,7 @@ class Plink:
         self.thread.daemon = True  # Set the thread as a daemon thread
         self.thread.start()
 
-    def update_motor_states(self, response: InputStruct):
+    def update_motor_states(self, response: DataFromPeri):
         """
         Update the motor states based on the input structure data.
 
@@ -269,46 +110,78 @@ class Plink:
             response.mag_z,
         )
 
-    def transfer_init(self):
+    def initialize_comms(self):
         """Prepare and send the initialization data."""
-        # Prepare data from current state
-        data = InitOutputStruct(self.frequency)
 
-        # Wait for the data ready pin to be active
-        self.data_ready_pin.wait_for_active()
-        # time.sleep(0.00001)
+        # First, send an invalid message to reset the SPI state
+        data = InvalidToPeri()
 
-        # Send data and receive response (Mock response for now)
-        response = InitInputStruct(
-            self.spi.xfer2(data.get_packed_struct(self.transfer_size))
-        )
+        self.transfer(data)
 
-        response.decode()
+        # Prepare data actual initialization data
+        data = InitToPeri(self.frequency)
+
+        initialized = False
+
+        while not initialized:
+            response = self.transfer(data)
+
+            # Check that the response is of the correct type
+            if isinstance(response, InitFromPeri):
+                print("Received initialization response")
+                initialized = True
+
+        # TODO: Confirm that the response is correct
 
         return response
 
-    def transfer(self):
+    def transfer(self, message: MessageToPeri) -> MessageFromPeri:
         """
         Prepare and send data, then receive and process the response.
         """
         # Prepare data from current state
-        data = OutputStruct(self.channel1, self.channel2, self.channel3, self.channel4)
-        data.valid = True
+        # data = DataToPeri(self.channel1, self.channel2, self.channel3, self.channel4)
+        # data.valid = True
 
         self.data_ready_pin.wait_for_active()
 
         # Send data and receive response (Mock response for now)
-        response = InputStruct(
-            self.spi.xfer2(data.get_packed_struct(self.transfer_size))
+        response = MessageParser().parse(
+            self.spi.xfer2(message.get_packed_struct(self.transfer_size))
         )
 
         # Update the motor states
-        if response.valid:
+        if isinstance(response, DataFromPeri):
             self.update_motor_states(response)
             self.last_message_time = time.time()
 
         # wait for data ready pin to go low
         self.data_ready_pin.wait_for_inactive()
+
+        return response
+
+    def update_motorgo(
+        self,
+    ):
+        """
+        Prepare and send data, then receive and process the response.
+        """
+        # Prepare data from current state
+        data = DataToPeri(self.channel1, self.channel2, self.channel3, self.channel4)
+
+        response = self.transfer(data)
+
+        # Update the motor states
+        if isinstance(response, DataFromPeri):
+            # self.update_motor_states(response)
+            self.last_message_time = time.time()
+
+        elif isinstance(response, InitFromPeri):
+            print("Received initialization response, re-doing initialization")
+            self.initialize_comms()
+
+        elif isinstance(response, InvalidFromPeri):
+            print("Invalid response received")
 
     def comms_thread(self):
         """
@@ -316,9 +189,7 @@ class Plink:
         """
         try:
             while self.running:
-                # start = time.time()
-                # Send the message
-                self.transfer()
+                self.update_motorgo()
 
                 # Check for response timeout
                 if self.last_message_time is not None:
