@@ -43,6 +43,7 @@ unsigned long loop_start_time = 0;
 void init_spi_comms()
 {
   bool ready = false;
+
   //   Prepare the initialize data
   init_output_t init_out;
   init_out.board_id = 1;
@@ -307,7 +308,7 @@ void loop()
   unsigned long corrected_delay_time = 0;
   if (loop_duration > delay_time)
   {
-    Serial.println("Loop duration exceeded delay time");
+    // Serial.println("Loop duration exceeded delay time: ");
   }
   else
   {
