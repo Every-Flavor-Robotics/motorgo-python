@@ -1,5 +1,4 @@
 from .plink import Plink
-
-__version__ = "0.1.0"
+from .version import __version__
 
 __all__ = ["Plink"]
