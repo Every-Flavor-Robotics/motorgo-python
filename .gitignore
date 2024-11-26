@@ -6,3 +6,4 @@
 .vscode
 __pycache__
 pyplink.egg-info/
+.syncignore
