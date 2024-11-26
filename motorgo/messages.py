@@ -88,7 +88,7 @@ class InvalidFromPeri(MessageFromPeri):
     SIZE = 1
     TYPE = 0x00
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes = None):
         super().__init__(data)
 
     def decode(self):

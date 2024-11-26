@@ -73,9 +73,12 @@ class Plink:
         # Reset the Plink
         self.reset()
 
-        connect_success = self.initialize_comms()
+        self.connected = self.initialize_comms()
 
-        if connect_success:
+        # If connected, start the comms thread
+        if self.connected:
+            print("Connected to Plink")
+
             # Start the communication thread
             self.running = True
             self.thread = threading.Thread(target=self.comms_thread)
@@ -121,10 +124,15 @@ class Plink:
     def initialize_comms(self):
         """Prepare and send the initialization data."""
 
+        print("Connecting to Plink...")
+
         # First, send an invalid message to reset the SPI state
         data = InvalidToPeri()
 
-        self.transfer(data)
+        # Transfer data until a valid response is received
+        message = None
+        while not message:
+            message = self.transfer(data)
 
         # Prepare data actual initialization data
         data = InitToPeri(self.frequency)
@@ -136,7 +144,6 @@ class Plink:
 
             # Check that the response is of the correct type
             if isinstance(response, InitFromPeri):
-                print("Received initialization response")
                 initialized = True
 
         valid = True
@@ -153,28 +160,30 @@ class Plink:
 
         return valid
 
-    def transfer(self, message: MessageToPeri) -> MessageFromPeri:
+    def transfer(self, message: MessageToPeri, timeout: float = 1.0) -> MessageFromPeri:
         """
         Prepare and send data, then receive and process the response.
         """
-        # Prepare data from current state
-        # data = DataToPeri(self.channel1, self.channel2, self.channel3, self.channel4)
-        # data.valid = True
 
-        self.data_ready_pin.wait_for_active()
+        # Wait for data ready pin to go high, or timeout
+        # If the data ready pin is not high, return an invalid response
+        if not self.data_ready_pin.wait_for_active(timeout=timeout):
+            # Failed transfer, return None to indicate failure
+            return None
 
-        # Send data and receive response (Mock response for now)
+            # Send data and receive response (Mock response for now)
         response = MessageParser().parse(
             self.spi.xfer2(message.get_packed_struct(self.transfer_size))
         )
 
-        # Update the motor states
-        if isinstance(response, DataFromPeri):
-            self.update_motor_states(response)
-            self.last_message_time = time.time()
+        # wait for data ready pin to go low, or timeout
+        if not self.data_ready_pin.wait_for_inactive(timeout=timeout):
+            # Failed transfer, return None to indicate failure
+            return None
 
-        # wait for data ready pin to go low
-        self.data_ready_pin.wait_for_inactive()
+        # Update last message time, if valid message received
+        if not isinstance(response, InvalidFromPeri):
+            self.last_message_time = time.time()
 
         return response
 
@@ -191,7 +200,7 @@ class Plink:
 
         # Update the motor states
         if isinstance(response, DataFromPeri):
-            # self.update_motor_states(response)
+            self.update_motor_states(response)
             self.last_message_time = time.time()
 
         elif isinstance(response, InitFromPeri):
@@ -207,14 +216,19 @@ class Plink:
         """
         try:
             while self.running:
-                self.update_motorgo()
 
-                # Check for response timeout
-                if self.last_message_time is not None:
-                    if time.time() - self.last_message_time > self.timeout:
-                        print("No response from SPI device")
-                        self.connected = False
-                        break
+                if self.connected:
+                    self.update_motorgo()
+
+                    # Check for response timeout
+                    if self.last_message_time is not None:
+                        if time.time() - self.last_message_time > self.timeout:
+                            print("MotorGo response timeout")
+                            self.connected = False
+                else:
+                    # If not connected, attempt to re-initialize
+                    print("Attempting to re-initialize connection")
+                    self.connected = self.initialize_comms()
 
         except KeyboardInterrupt:
             # Handle keyboard interrupt (Ctrl+C)

@@ -28,7 +28,7 @@ class MessageParser:
         message_class = self.message_map.get(message_type)
 
         if message_class is None:
-            return None
+            return InvalidFromPeri(data)
 
         # Create an instance of the message class
         message = message_class(data)
