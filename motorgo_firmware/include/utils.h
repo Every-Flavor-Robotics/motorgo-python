@@ -2,6 +2,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "motorgo_plink.h"
+
 void freq_println(String str, int freq)
 {
   static unsigned long last_print_time = 0;
@@ -52,12 +54,6 @@ union data_out_t
   uint8_t raw[BUFFER_OUT_SIZE];
 };
 
-enum class ControlMode : uint8_t
-{
-  VELOCITY,
-  POWER
-};
-
 enum class BrakeMode : uint8_t
 {
   BRAKE,
@@ -78,10 +74,10 @@ union data_in_t
     float channel_4_command;
 
     // Control mode
-    ControlMode channel_1_control_mode;
-    ControlMode channel_2_control_mode;
-    ControlMode channel_3_control_mode;
-    ControlMode channel_4_control_mode;
+    MotorGo::ControlMode channel_1_control_mode;
+    MotorGo::ControlMode channel_2_control_mode;
+    MotorGo::ControlMode channel_3_control_mode;
+    MotorGo::ControlMode channel_4_control_mode;
 
     // Brake mode
     BrakeMode channel_1_brake_mode;
@@ -120,6 +116,25 @@ union init_output_t
   };
 
   uint8_t raw[INIT_OUT_SIZE];
+};
+
+#define PID_CONTROLLER_MESSAGE_TYPE 0x03
+// 5 floats, 2 uint8_t: 4 * 5 + 2 = 22
+#define PID_CONTROLLER_FROM_CONTROLLER_SIZE 22
+union pid_controller_from_controller_t
+{
+  struct __attribute__((packed))
+  {
+    uint8_t message_type = 0x03;
+    uint8_t channel;
+    float p;
+    float i;
+    float d;
+    float output_ramp;
+    float lpf;
+  };
+
+  uint8_t raw[PID_CONTROLLER_FROM_CONTROLLER_SIZE];
 };
 
 // Buffer out size is 69 bytes, pad with 4 bytes for DMA driver, and then

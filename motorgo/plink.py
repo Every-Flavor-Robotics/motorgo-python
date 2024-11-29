@@ -2,6 +2,7 @@ import atexit
 import struct
 import threading
 import time
+from collections import deque
 
 import spidev
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
@@ -18,6 +19,7 @@ from .messages import (
     InvalidToPeri,
     MessageFromPeri,
     MessageToPeri,
+    PIDToPeri,
 )
 from .motor_channel import BrakeMode, ControlMode, MotorChannel
 from .version import __version__
@@ -57,6 +59,8 @@ class Plink:
 
         self.data_ready_pin = DigitalInputDevice(25)
         self.reset_pin = DigitalOutputDevice(22, active_high=False, initial_value=False)
+
+        self.config_message_queue = deque()
 
     def reset(self):
         """
@@ -193,10 +197,21 @@ class Plink:
         """
         Prepare and send data, then receive and process the response.
         """
-        # Prepare data from current state
-        data = DataToPeri(self.channel1, self.channel2, self.channel3, self.channel4)
 
-        response = self.transfer(data)
+        # Preapre any config update messages
+        self.prepare_config_update_messages()
+
+        # Check for any messages in the queue
+        if self.config_message_queue:
+            message = self.config_message_queue.popleft()
+        else:
+            # Normal case, prepare motor command data
+            # Prepare data from current state
+            message = DataToPeri(
+                self.channel1, self.channel2, self.channel3, self.channel4
+            )
+
+        response = self.transfer(message)
 
         # Update the motor states
         if isinstance(response, DataFromPeri):
@@ -209,6 +224,23 @@ class Plink:
 
         elif isinstance(response, InvalidFromPeri):
             print("Invalid response received")
+
+    def prepare_config_update_messages(self):
+        """
+        Prepare messages for any config updates to be sent to the MotorGo board.
+        """
+
+        # Check all motor channels for pending updates
+        for i, channel in enumerate(
+            [self.channel1, self.channel2, self.channel3, self.channel4]
+        ):
+            channel_number = i + 1
+            if channel._pid_update_ready:
+
+                new_params = channel._get_velocity_gain_update()
+
+                # Prepare and add the PID update message to the queue
+                self.config_message_queue.append(PIDToPeri(channel_number, *new_params))
 
     def comms_thread(self):
         """

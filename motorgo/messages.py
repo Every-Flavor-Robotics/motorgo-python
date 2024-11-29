@@ -322,3 +322,52 @@ class DataFromPeri(MessageFromPeri):
             f"Channel 4 Position: {self.channel_4_pos}\n"
             f"Channel 4 Velocity: {self.channel_4_vel}\n"
         )
+
+
+class PIDToPeri(MessageToPeri):
+    BUFFER_OUT_SIZE = 22
+    TYPE = 0x03
+
+    def __init__(
+        self,
+        channel: int,
+        p: float,
+        i: float,
+        d: float,
+        output_ramp: float = 10000,
+        lpf: float = 0.0,
+    ):
+        """
+        Initialize the output structure with PID constants.
+        """
+        # Convert channel from int to a byte
+        # Confirm that the channel is within the valid range
+        assert 1 <= channel <= 4
+        self.channel = channel
+        self.p = p
+        self.i = i
+        self.d = d
+        self.output_ramp = output_ramp
+        self.lpf = lpf
+
+    def get_packed_struct(self, output_size=None) -> bytes:
+        """
+        Pack the structure data into bytes for transmission.
+        """
+        packed = struct.pack(
+            "<2B5f",
+            self.TYPE,
+            self.channel,
+            self.p,
+            self.i,
+            self.d,
+            self.output_ramp,
+            self.lpf,
+        )
+
+        assert len(packed) == self.BUFFER_OUT_SIZE
+
+        if output_size is not None and output_size > len(packed):
+            return packed + b"\x00" * (output_size - len(packed))
+
+        return packed

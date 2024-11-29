@@ -3,7 +3,7 @@ import threading
 
 # Enums to match C++ definitions
 class ControlMode:
-    VELOCITY = 0
+    VELOCITY = 2
     POWER = 1
 
 
@@ -28,6 +28,15 @@ class MotorChannel:
 
         self._position = 0.0
         self._velocity = 0.0
+
+        # PID parameters for velocity control
+        self.velocity_p = 0.0
+        self.velocity_i = 0.0
+        self.velocity_d = 0.0
+        self.velocity_output_ramp = 10000.0
+        self.velocity_lpf = 0.0
+
+        self._pid_update_ready = False
 
     @property
     def velocity_command(self) -> float:
@@ -141,3 +150,48 @@ class MotorChannel:
         """
         with self.lock:
             self._velocity = value
+
+    def set_velocity_pid_gains(
+        self,
+        p: float = None,
+        i: float = None,
+        d: float = None,
+        output_ramp: float = None,
+        lpf: float = None,
+    ):
+        """
+        Set the PID gains for velocity control.
+        """
+        with self.lock:
+            if p is not None:
+                self.velocity_p = p
+            if i is not None:
+                self.velocity_i = i
+            if d is not None:
+                self.velocity_d = d
+            if output_ramp is not None:
+                self.velocity_output_ramp = output_ramp
+            if lpf is not None:
+                self.velocity_lpf = lpf
+
+            self._pid_update_ready = True
+
+    def _get_velocity_gain_update(self) -> tuple:
+        """Returns the new PID gains and resets the flag.
+
+        Returns:
+            tuple: A tuple containing the PID gains.
+        """
+
+        if self._pid_update_ready:
+            with self.lock:
+                self._pid_update_ready = False
+                return (
+                    self.velocity_p,
+                    self.velocity_i,
+                    self.velocity_d,
+                    self.velocity_output_ramp,
+                    self.velocity_lpf,
+                )
+
+        return None

@@ -5,7 +5,6 @@
 #include <Wire.h>
 
 #include "SPI.h"
-#include "helper.h"
 #include "motorgo_plink.h"
 #include "utils.h"
 
@@ -92,6 +91,28 @@ void init_spi_comms()
   Serial.println("SPI communication initialized");
 }
 
+MotorGo::MotorChannel *channels[] = {&ch1, &ch2, &ch3, &ch4};
+void update_pid_controller(pid_controller_from_controller_t pid_data)
+{
+  // Confim that channel is between 1 and 4
+  if (pid_data.channel < 1 || pid_data.channel > 4)
+  {
+    return;
+  }
+  //   0-indexed channel
+  pid_data.channel--;
+
+  MotorGo::PIDParameters pid_params = {
+      .p = pid_data.p,
+      .i = pid_data.i,
+      .d = pid_data.d,
+      .output_ramp = pid_data.output_ramp,
+      .lpf_time_constant = pid_data.lpf,
+  };
+
+  channels[pid_data.channel]->set_velocity_controller(pid_params);
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -162,6 +183,16 @@ void setup()
   plink.init();
 
   init_spi_comms();
+
+  ch1.set_control_mode(MotorGo::ControlMode::Voltage);
+  ch2.set_control_mode(MotorGo::ControlMode::Voltage);
+  ch3.set_control_mode(MotorGo::ControlMode::Voltage);
+  ch4.set_control_mode(MotorGo::ControlMode::Voltage);
+
+  ch1.enable();
+  ch2.enable();
+  ch3.enable();
+  ch4.enable();
 }
 
 void loop()
@@ -223,78 +254,97 @@ void loop()
 
   if (received_bytes != 0)
   {
-    // No data received, do nothing
-    //   Decode data into data_in_t
-    memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
-
-    // Use freq_println to print the data at a specific frequency
-    // String str_out = "data_in: ";
-    // str_out += "valid: ";
-    // str_out += data_in.valid;
-    // str_out += "\nchannel_1_brake_mode: ";
-    // str_out += (int)data_in.channel_1_brake_mode;
-    // str_out += "\nchannel_2_brake_mode: ";
-    // str_out += (int)data_in.channel_2_brake_mode;
-    // str_out += "\nchannel_3_brake_mode: ";
-    // str_out += (int)data_in.channel_3_brake_mode;
-    // str_out += "\nchannel_4_brake_mode: ";
-    // str_out += (int)data_in.channel_4_brake_mode;
-    // str_out += "\nchannel_1_command: ";
-    // str_out += data_in.channel_1_command;
-    // str_out += "\nchannel_2_command: ";
-    // str_out += data_in.channel_2_command;
-    // str_out += "\nchannel_3_command: ";
-    // str_out += data_in.channel_3_command;
-    // str_out += "\nchannel_4_command: ";
-    // str_out += data_in.channel_4_command;
-
-    // freq_println(str_out, 10);
-
-    if (data_in.message_type == DATA_MESSAGE_TYPE)
+    // Check first byte for message type
+    uint8_t message_type = rx_buf[0];
+    switch (message_type)
     {
-      if (data_in.channel_1_brake_mode == BrakeMode::BRAKE)
+      case DATA_MESSAGE_TYPE:
       {
-        ch1.set_brake();
-      }
-      else
-      {
-        ch1.set_coast();
-      }
+        // Decode data into data_in_t
+        memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
 
-      if (data_in.channel_2_brake_mode == BrakeMode::BRAKE)
-      {
-        ch2.set_brake();
-      }
-      else
-      {
-        ch2.set_coast();
-      }
+        // Skip brake/coast mode for now
 
-      if (data_in.channel_3_brake_mode == BrakeMode::BRAKE)
-      {
-        ch3.set_brake();
-      }
-      else
-      {
-        ch3.set_coast();
-      }
+        ch1.set_control_mode(data_in.channel_1_control_mode);
+        ch2.set_control_mode(data_in.channel_2_control_mode);
+        ch3.set_control_mode(data_in.channel_3_control_mode);
+        ch4.set_control_mode(data_in.channel_4_control_mode);
 
-      if (data_in.channel_4_brake_mode == BrakeMode::BRAKE)
-      {
-        ch4.set_brake();
-      }
-      else
-      {
-        ch4.set_coast();
-      }
+        if (data_in.channel_1_control_mode == MotorGo::ControlMode::Velocity)
+        {
+          ch1.set_target_velocity(data_in.channel_1_command);
+        }
+        else
+        {
+          ch1.set_power(data_in.channel_1_command);
+        }
 
-      ch1.set_power(data_in.channel_1_command);
-      ch2.set_power(data_in.channel_2_command);
-      ch3.set_power(data_in.channel_3_command);
-      ch4.set_power(data_in.channel_4_command);
+        if (data_in.channel_2_control_mode == MotorGo::ControlMode::Velocity)
+        {
+          ch2.set_target_velocity(data_in.channel_2_command);
+        }
+        else
+        {
+          ch2.set_power(data_in.channel_2_command);
+        }
 
-      last_data_time = millis();
-    }
+        if (data_in.channel_3_control_mode == MotorGo::ControlMode::Velocity)
+        {
+          ch3.set_target_velocity(data_in.channel_3_command);
+        }
+        else
+        {
+          ch3.set_power(data_in.channel_3_command);
+        }
+
+        if (data_in.channel_4_control_mode == MotorGo::ControlMode::Velocity)
+        {
+          ch4.set_target_velocity(data_in.channel_4_command);
+        }
+        else
+        {
+          ch4.set_power(data_in.channel_4_command);
+        }
+
+        last_data_time = millis();
+        break;
+      }
+      case PID_CONTROLLER_MESSAGE_TYPE:
+      {
+        // Decode data into pid_controller_from_controller_t
+        pid_controller_from_controller_t pid_data;
+        memcpy(pid_data.raw, rx_buf, PID_CONTROLLER_FROM_CONTROLLER_SIZE);
+
+        update_pid_controller(pid_data);
+
+        break;
+      }
+    };
+
+    // // No data received, do nothing
+    // //   Decode data into data_in_t
+    // memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
+
+    // // Use freq_println to print the data at a specific frequency
+    // // String str_out = "data_in: ";
+    // // str_out += "valid: ";
+    // // str_out += data_in.valid;
+    // // str_out += "\nchannel_1_brake_mode: ";
+    // // str_out += (int)data_in.channel_1_brake_mode;
+    // // str_out += "\nchannel_2_brake_mode: ";
+    // // str_out += (int)data_in.channel_2_brake_mode;
+    // // str_out += "\nchannel_3_brake_mode: ";
+    // // str_out += (int)data_in.channel_3_brake_mode;
+    // // str_out += "\nchannel_4_brake_mode: ";
+    // // str_out += (int)data_in.channel_4_brake_mode;
+    // // str_out += "\nchannel_1_command: ";
+    // // str_out += data_in.channel_1_command;
+    // // str_out += "\nchannel_2_command: ";
+    // // str_out += data_in.channel_2_command;
+    // // str_out += "\nchannel_3_command: ";
+    // // str_out += data_in.channel_3_command;
+    // // str_out += "\nchannel_4_command: ";
+    // // str_out += data_in.channel_4_command;
   }
 
   if (millis() - last_data_time > 1000)
