@@ -110,6 +110,14 @@ class IMU:
 
         return self.ahrs.gravity
 
+    @property
+    def quaternion(self) -> np.ndarray:
+        """
+        Get the quaternion calculated by the AHRS.
+        """
+
+        return self.ahrs.quaternion
+
     def __str__(self) -> str:
         """
         Return a string representation of the IMU data.
