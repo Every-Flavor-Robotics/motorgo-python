@@ -3,8 +3,9 @@
 # connected to the Raspberry Pi and that it has been flashed with the
 # MotorGo firmware.
 
-from pyplink import Plink, BrakeMode, ControlMode
 import time
+
+from motorgo import BrakeMode, ControlMode, Plink
 
 
 def main():
@@ -28,13 +29,6 @@ def main():
     right_motor.control_mode = ControlMode.VELOCITY
     plink.channel3.control_mode = ControlMode.POWER
     plink.channel4.control_mode = ControlMode.POWER
-
-    # You can configure the brake mode of the motor channels
-    # The two options are BrakeMode.BRAKE and BrakeMode.COAST
-    left_motor.brake_mode = BrakeMode.BRAKE
-    right_motor.brake_mode = BrakeMode.BRAKE
-    plink.channel3.brake_mode = BrakeMode.COAST
-    plink.channel4.brake_mode = BrakeMode.COAST
 
     # Main program loop
     velocity_command = 0.0
