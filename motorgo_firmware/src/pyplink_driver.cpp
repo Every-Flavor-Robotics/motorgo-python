@@ -39,6 +39,8 @@ unsigned long delay_time = 0;
 unsigned long last_data_time = 0;
 unsigned long loop_start_time = 0;
 
+bool communication_active = true;
+
 void init_spi_comms()
 {
   bool ready = false;
@@ -111,6 +113,10 @@ void update_pid_controller(pid_controller_from_controller_t pid_data)
   };
 
   channels[pid_data.channel]->set_velocity_controller(pid_params);
+
+  // Re-enable the channel, in case it was disabled due to mis-configured
+  // controller
+  channels[pid_data.channel]->enable();
 }
 
 void setup()
@@ -225,23 +231,6 @@ void loop()
   data_out.mag_y = 0;
   data_out.mag_z = 0;
 
-  //   Print imu data
-  //   String str_out = "imu: ";
-  //   str_out += "gyro_x: ";
-  //   str_out += data_out.gyro_x;
-  //   str_out += "\ngyro_y: ";
-  //   str_out += data_out.gyro_y;
-  //   str_out += "\ngyro_z: ";
-  //   str_out += data_out.gyro_z;
-  //   str_out += "\naccel_x: ";
-  //   str_out += data_out.accel_x;
-  //   str_out += "\naccel_y: ";
-  //   str_out += data_out.accel_y;
-  //   str_out += "\naccel_z: ";
-  //   str_out += data_out.accel_z;
-
-  //   freq_println(str_out, 10);
-
   // Copy data to tx buffer
   memcpy(tx_buf, data_out.raw, BUFFER_OUT_SIZE);
 
@@ -254,7 +243,7 @@ void loop()
 
   if (received_bytes != 0)
   {
-    // Check first byte for message type
+    // Check first byte for message type and handle accordingly
     uint8_t message_type = rx_buf[0];
     switch (message_type)
     {
@@ -265,10 +254,29 @@ void loop()
 
         // Skip brake/coast mode for now
 
-        ch1.set_control_mode(data_in.channel_1_control_mode);
-        ch2.set_control_mode(data_in.channel_2_control_mode);
-        ch3.set_control_mode(data_in.channel_3_control_mode);
-        ch4.set_control_mode(data_in.channel_4_control_mode);
+        if (ch1.get_control_mode() != data_in.channel_1_control_mode)
+        {
+          ch1.set_control_mode(data_in.channel_1_control_mode);
+          ch1.enable();
+        }
+
+        if (ch2.get_control_mode() != data_in.channel_2_control_mode)
+        {
+          ch2.set_control_mode(data_in.channel_2_control_mode);
+          ch2.enable();
+        }
+
+        if (ch3.get_control_mode() != data_in.channel_3_control_mode)
+        {
+          ch3.set_control_mode(data_in.channel_3_control_mode);
+          ch3.enable();
+        }
+
+        if (ch4.get_control_mode() != data_in.channel_4_control_mode)
+        {
+          ch4.set_control_mode(data_in.channel_4_control_mode);
+          ch4.enable();
+        }
 
         if (data_in.channel_1_control_mode == MotorGo::ControlMode::Velocity)
         {
@@ -320,43 +328,29 @@ void loop()
         break;
       }
     };
-
-    // // No data received, do nothing
-    // //   Decode data into data_in_t
-    // memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
-
-    // // Use freq_println to print the data at a specific frequency
-    // // String str_out = "data_in: ";
-    // // str_out += "valid: ";
-    // // str_out += data_in.valid;
-    // // str_out += "\nchannel_1_brake_mode: ";
-    // // str_out += (int)data_in.channel_1_brake_mode;
-    // // str_out += "\nchannel_2_brake_mode: ";
-    // // str_out += (int)data_in.channel_2_brake_mode;
-    // // str_out += "\nchannel_3_brake_mode: ";
-    // // str_out += (int)data_in.channel_3_brake_mode;
-    // // str_out += "\nchannel_4_brake_mode: ";
-    // // str_out += (int)data_in.channel_4_brake_mode;
-    // // str_out += "\nchannel_1_command: ";
-    // // str_out += data_in.channel_1_command;
-    // // str_out += "\nchannel_2_command: ";
-    // // str_out += data_in.channel_2_command;
-    // // str_out += "\nchannel_3_command: ";
-    // // str_out += data_in.channel_3_command;
-    // // str_out += "\nchannel_4_command: ";
-    // // str_out += data_in.channel_4_command;
   }
 
   if (millis() - last_data_time > 1000)
   {
-    ch1.set_power(0);
-    ch2.set_power(0);
-    ch3.set_power(0);
-    ch4.set_power(0);
+    ch1.disable();
+    ch2.disable();
+    ch3.disable();
+    ch4.disable();
+
+    communication_active = false;
+  }
+  //   Re-enable if data is received
+  else if (!communication_active)
+  {
+    ch1.enable();
+    ch2.enable();
+    ch3.enable();
+    ch4.enable();
+
+    communication_active = true;
   }
 
-  //   Print target frequency
-
+  // Delay to maintain desired frequency
   unsigned long loop_duration = micros() - loop_start_time;
   unsigned long corrected_delay_time = 0;
   if (loop_duration > delay_time)
