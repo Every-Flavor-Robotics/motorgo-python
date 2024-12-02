@@ -282,6 +282,10 @@ void loop()
         {
           ch1.set_target_velocity(data_in.channel_1_command);
         }
+        else if (data_in.channel_1_control_mode == MotorGo::ControlMode::None)
+        {
+          ch1.disable();
+        }
         else
         {
           ch1.set_power(data_in.channel_1_command);
@@ -290,6 +294,10 @@ void loop()
         if (data_in.channel_2_control_mode == MotorGo::ControlMode::Velocity)
         {
           ch2.set_target_velocity(data_in.channel_2_command);
+        }
+        else if (data_in.channel_2_control_mode == MotorGo::ControlMode::None)
+        {
+          ch2.disable();
         }
         else
         {
@@ -300,6 +308,10 @@ void loop()
         {
           ch3.set_target_velocity(data_in.channel_3_command);
         }
+        else if (data_in.channel_3_control_mode == MotorGo::ControlMode::None)
+        {
+          ch3.disable();
+        }
         else
         {
           ch3.set_power(data_in.channel_3_command);
@@ -308,6 +320,10 @@ void loop()
         if (data_in.channel_4_control_mode == MotorGo::ControlMode::Velocity)
         {
           ch4.set_target_velocity(data_in.channel_4_command);
+        }
+        else if (data_in.channel_4_control_mode == MotorGo::ControlMode::None)
+        {
+          ch4.disable();
         }
         else
         {
