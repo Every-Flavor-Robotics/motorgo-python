@@ -5,6 +5,7 @@ import threading
 class ControlMode:
     VELOCITY = 2
     POWER = 1
+    NONE = 0
 
 
 class BrakeMode:
@@ -162,19 +163,23 @@ class MotorChannel:
         """
         Set the PID gains for velocity control.
         """
+
         with self.lock:
             if p is not None:
                 self.velocity_p = p
+                self._pid_update_ready = True
             if i is not None:
                 self.velocity_i = i
+                self._pid_update_ready = True
             if d is not None:
                 self.velocity_d = d
+                self._pid_update_ready = True
             if output_ramp is not None:
                 self.velocity_output_ramp = output_ramp
+                self._pid_update_ready = True
             if lpf is not None:
                 self.velocity_lpf = lpf
-
-            self._pid_update_ready = True
+                self._pid_update_ready = True
 
     def _get_velocity_gain_update(self) -> tuple:
         """Returns the new PID gains and resets the flag.
