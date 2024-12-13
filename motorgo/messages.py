@@ -246,8 +246,8 @@ class DataToPeri(MessageToPeri):
         )
 
 
-class DataFromPeri(MessageFromPeri):
-    BUFFER_IN_SIZE = 69
+class MotorDataFromPeri(MessageFromPeri):
+    BUFFER_IN_SIZE = 33
     TYPE = 0x02
 
     def __init__(self, data: bytes = None):
@@ -266,17 +266,17 @@ class DataFromPeri(MessageFromPeri):
         self.channel_4_pos = 0
         self.channel_4_vel = 0
 
-        self.gyro_x = 0
-        self.gyro_y = 0
-        self.gyro_z = 0
+        # self.gyro_x = 0
+        # self.gyro_y = 0
+        # self.gyro_z = 0
 
-        self.accel_x = 0
-        self.accel_y = 0
-        self.accel_z = 0
+        # self.accel_x = 0
+        # self.accel_y = 0
+        # self.accel_z = 0
 
-        self.mag_x = 0
-        self.mag_y = 0
-        self.mag_z = 0
+        # self.mag_x = 0
+        # self.mag_y = 0
+        # self.mag_z = 0
 
     def decode(self):
         """
@@ -284,7 +284,7 @@ class DataFromPeri(MessageFromPeri):
         """
         data = bytearray(self.data)
 
-        unpacked_data = struct.unpack_from("<B17f", data)
+        unpacked_data = struct.unpack_from("<B8f", data)
 
         self.valid = unpacked_data[0] == self.TYPE
         self.channel_1_pos = unpacked_data[1]
@@ -296,15 +296,15 @@ class DataFromPeri(MessageFromPeri):
         self.channel_4_pos = unpacked_data[7]
         self.channel_4_vel = unpacked_data[8]
 
-        self.gyro_x = unpacked_data[9]
-        self.gyro_y = unpacked_data[10]
-        self.gyro_z = unpacked_data[11]
-        self.accel_x = unpacked_data[12]
-        self.accel_y = unpacked_data[13]
-        self.accel_z = unpacked_data[14]
-        self.mag_x = unpacked_data[15]
-        self.mag_y = unpacked_data[16]
-        self.mag_z = unpacked_data[17]
+        # self.gyro_x = unpacked_data[9]
+        # self.gyro_y = unpacked_data[10]
+        # self.gyro_z = unpacked_data[11]
+        # self.accel_x = unpacked_data[12]
+        # self.accel_y = unpacked_data[13]
+        # self.accel_z = unpacked_data[14]
+        # self.mag_x = unpacked_data[15]
+        # self.mag_y = unpacked_data[16]
+        # self.mag_z = unpacked_data[17]
 
     def __str__(self) -> str:
         """
@@ -324,9 +324,72 @@ class DataFromPeri(MessageFromPeri):
         )
 
 
+class IMUDataFromPeri(MessageFromPeri):
+    BUFFER_IN_SIZE = 37
+    TYPE = 0x03
+
+    def __init__(self, data: bytes = None):
+        """
+        Initialize the input structure and decode data if provided.
+        """
+        super().__init__(data)
+
+        self.valid = False
+
+        self.gyro_x = 0
+        self.gyro_y = 0
+        self.gyro_z = 0
+
+        self.accel_x = 0
+        self.accel_y = 0
+        self.accel_z = 0
+
+        self.mag_x = 0
+        self.mag_y = 0
+        self.mag_z = 0
+
+    def decode(self):
+        """
+        Decode the input data into the structure fields.
+        """
+        data = bytearray(self.data)
+
+        unpacked_data = struct.unpack_from("<B9f", data)
+
+        self.valid = unpacked_data[0] == self.TYPE
+
+        self.gyro_x = unpacked_data[1]
+        self.gyro_y = unpacked_data[2]
+        self.gyro_z = unpacked_data[3]
+        self.accel_x = unpacked_data[4]
+        self.accel_y = unpacked_data[5]
+        self.accel_z = unpacked_data[6]
+        self.mag_x = unpacked_data[7]
+        self.mag_y = unpacked_data[8]
+        self.mag_z = unpacked_data[9]
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the input structure.
+        """
+        return (
+            f"IMU Struct:\n"
+            f"Valid: {self.valid}\n"
+            f"Gyro X: {self.gyro_x}\n"
+            f"Gyro Y: {self.gyro_y}\n"
+            f"Gyro Z: {self.gyro_z}\n"
+            f"Accel X: {self.accel_x}\n"
+            f"Accel Y: {self.accel_y}\n"
+            f"Accel Z: {self.accel_z}\n"
+            f"Mag X: {self.mag_x}\n"
+            f"Mag Y: {self.mag_y}\n"
+            f"Mag Z: {self.mag_z}\n"
+        )
+
+
 class PIDToPeri(MessageToPeri):
     BUFFER_OUT_SIZE = 22
-    TYPE = 0x03
+    TYPE = 0x04
 
     def __init__(
         self,

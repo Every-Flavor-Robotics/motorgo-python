@@ -1,6 +1,6 @@
 #include <Adafruit_LIS3MDL.h>
 #include <Adafruit_LSM6DS3TRC.h>
-#include <ESP32DMASPISlave.h>
+#include <ESP32SPISlave.h>
 #include <WiFi.h>
 #include <Wire.h>
 
@@ -26,13 +26,17 @@ MotorGo::MotorChannel &ch4 = plink.ch4;
 #define DATA_READY 36
 
 static constexpr size_t QUEUE_SIZE = 1;
-uint8_t *tx_buf;
-uint8_t *rx_buf;
+// uint8_t *tx_buf;
+// uint8_t *rx_buf;
 
-data_out_t data_out;
-data_in_t data_in;
+uint8_t tx_buf[BUFFER_SIZE];
+uint8_t rx_buf[BUFFER_SIZE];
 
-ESP32DMASPI::Slave slave;
+motor_data_out_t motor_data_out;
+motor_data_in_t motor_data_in;
+imu_data_out_t imu_data_out;
+
+ESP32SPISlave slave;
 
 // Time to delay between data transmissions
 unsigned long delay_time = 0;
@@ -131,9 +135,9 @@ void setup()
   bool lsm6ds_success = lsm6ds.begin_I2C(0x6a, &Wire1);
   //   bool lis3mdl_success = lis3mdl.begin_I2C(0x1C, &Wire1);
 
-  //   Allocate buffers
-  tx_buf = slave.allocDMABuffer(BUFFER_SIZE);
-  rx_buf = slave.allocDMABuffer(BUFFER_SIZE);
+  //   Fill buffer with zeros
+  memset(tx_buf, 0, BUFFER_SIZE);
+  memset(rx_buf, 0, BUFFER_SIZE);
 
   //   // Restart if IMU initialization fails
   //   if (!lsm6ds_success || !lis3mdl_success)
@@ -164,25 +168,22 @@ void setup()
                           false,               // don't latch
                           true);               // enabled!
 
-  // Connect to Wi-Fi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  //   // Connect to Wi-Fi
+  //   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.println("Connecting to WiFi...");
-  }
+  //   while (WiFi.status() != WL_CONNECTED)
+  //   {
+  //     delay(500);
+  //     Serial.println("Connecting to WiFi...");
+  //   }
 
   Serial.println("Connected to WiFi");
 
   slave.setDataMode(SPI_MODE3);    // default: SPI_MODE0
   slave.setQueueSize(QUEUE_SIZE);  // default: 1
-  slave.setMaxTransferSize(BUFFER_SIZE);
+                                   //   slave.setMaxTransferSize(BUFFER_SIZE);
 
   slave.begin(FSPI, SCK, MISO, MOSI, SS);
-
-  Serial.println(BUFFER_IN_SIZE);
-  Serial.println(BUFFER_OUT_SIZE);
 
   Serial.println("start spi slave");
 
@@ -201,48 +202,63 @@ void setup()
   ch4.enable();
 }
 
+bool last_message_type = false;
+
 void loop()
 {
-  sensors_event_t accel, gyro, mag, temp;
-  lsm6ds.getEvent(&accel, &gyro, &temp);
-  //   lis3mdl.getEvent(&mag);
+  if (last_message_type)
+  {
+    motor_data_out.channel_1_pos = ch1.get_position();
+    motor_data_out.channel_1_vel = ch1.get_velocity();
 
-  data_out.channel_1_pos = ch1.get_position();
-  data_out.channel_1_vel = ch1.get_velocity();
+    motor_data_out.channel_2_pos = ch2.get_position();
+    motor_data_out.channel_2_vel = ch2.get_velocity();
 
-  data_out.channel_2_pos = ch2.get_position();
-  data_out.channel_2_vel = ch2.get_velocity();
+    motor_data_out.channel_3_pos = ch3.get_position();
+    motor_data_out.channel_3_vel = ch3.get_velocity();
 
-  data_out.channel_3_pos = ch3.get_position();
-  data_out.channel_3_vel = ch3.get_velocity();
+    motor_data_out.channel_4_pos = ch4.get_position();
+    motor_data_out.channel_4_vel = ch4.get_velocity();
 
-  data_out.channel_4_pos = ch4.get_position();
-  data_out.channel_4_vel = ch4.get_velocity();
+    // Copy data to tx buffer
+    memcpy(tx_buf, motor_data_out.raw, MOTOR_DATA_OUT_SIZE);
+  }
+  else
+  {
+    sensors_event_t accel, gyro, mag, temp;
+    lsm6ds.getEvent(&accel, &gyro, &temp);
+    lis3mdl.getEvent(&mag);
 
-  data_out.gyro_x = gyro.gyro.x;
-  data_out.gyro_y = gyro.gyro.y;
-  data_out.gyro_z = gyro.gyro.z;
+    imu_data_out.gyro_x = gyro.gyro.x;
+    imu_data_out.gyro_y = gyro.gyro.y;
+    imu_data_out.gyro_z = gyro.gyro.z;
 
-  data_out.accel_x = accel.acceleration.x;
-  data_out.accel_y = accel.acceleration.y;
-  data_out.accel_z = accel.acceleration.z;
+    imu_data_out.accel_x = accel.acceleration.x;
+    imu_data_out.accel_y = accel.acceleration.y;
+    imu_data_out.accel_z = accel.acceleration.z;
 
-  data_out.mag_x = (float)WiFi.RSSI();
-  data_out.mag_y = 0;
-  data_out.mag_z = 0;
+    imu_data_out.mag_x = 0;  //(float)WiFi.RSSI();
+    imu_data_out.mag_y = 0;
+    imu_data_out.mag_z = 0;
 
-  // Copy data to tx buffer
-  memcpy(tx_buf, data_out.raw, BUFFER_OUT_SIZE);
+    // Copy data to tx buffer
+    memcpy(tx_buf, imu_data_out.raw, IMU_DATA_OUT_SIZE);
+  }
 
   digitalWrite(DATA_READY, HIGH);
 
   const size_t received_bytes =
-      slave.transfer(tx_buf, rx_buf, BUFFER_SIZE, 100);
+      slave.transfer(tx_buf, rx_buf, BUFFER_SIZE, 300);
 
   digitalWrite(DATA_READY, LOW);
 
   if (received_bytes != 0)
   {
+    // Transmission success
+    // Flip the message type, to alternate between IMU and motor data
+    last_message_type = !last_message_type;
+
+    // Decode the data
     // Check first byte for message type and handle accordingly
     uint8_t message_type = rx_buf[0];
     switch (message_type)
@@ -250,84 +266,92 @@ void loop()
       case DATA_MESSAGE_TYPE:
       {
         // Decode data into data_in_t
-        memcpy(data_in.raw, rx_buf, BUFFER_IN_SIZE);
+        memcpy(motor_data_in.raw, rx_buf, MOTOR_DATA_IN_SIZE);
 
         // Skip brake/coast mode for now
 
-        if (ch1.get_control_mode() != data_in.channel_1_control_mode)
+        if (ch1.get_control_mode() != motor_data_in.channel_1_control_mode)
         {
-          ch1.set_control_mode(data_in.channel_1_control_mode);
+          ch1.set_control_mode(motor_data_in.channel_1_control_mode);
           ch1.enable();
         }
 
-        if (ch2.get_control_mode() != data_in.channel_2_control_mode)
+        if (ch2.get_control_mode() != motor_data_in.channel_2_control_mode)
         {
-          ch2.set_control_mode(data_in.channel_2_control_mode);
+          ch2.set_control_mode(motor_data_in.channel_2_control_mode);
           ch2.enable();
         }
 
-        if (ch3.get_control_mode() != data_in.channel_3_control_mode)
+        if (ch3.get_control_mode() != motor_data_in.channel_3_control_mode)
         {
-          ch3.set_control_mode(data_in.channel_3_control_mode);
+          ch3.set_control_mode(motor_data_in.channel_3_control_mode);
           ch3.enable();
         }
 
-        if (ch4.get_control_mode() != data_in.channel_4_control_mode)
+        if (ch4.get_control_mode() != motor_data_in.channel_4_control_mode)
         {
-          ch4.set_control_mode(data_in.channel_4_control_mode);
+          ch4.set_control_mode(motor_data_in.channel_4_control_mode);
           ch4.enable();
         }
 
-        if (data_in.channel_1_control_mode == MotorGo::ControlMode::Velocity)
+        if (motor_data_in.channel_1_control_mode ==
+            MotorGo::ControlMode::Velocity)
         {
-          ch1.set_target_velocity(data_in.channel_1_command);
+          ch1.set_target_velocity(motor_data_in.channel_1_command);
         }
-        else if (data_in.channel_1_control_mode == MotorGo::ControlMode::None)
+        else if (motor_data_in.channel_1_control_mode ==
+                 MotorGo::ControlMode::None)
         {
           ch1.disable();
         }
         else
         {
-          ch1.set_power(data_in.channel_1_command);
+          ch1.set_power(motor_data_in.channel_1_command);
         }
 
-        if (data_in.channel_2_control_mode == MotorGo::ControlMode::Velocity)
+        if (motor_data_in.channel_2_control_mode ==
+            MotorGo::ControlMode::Velocity)
         {
-          ch2.set_target_velocity(data_in.channel_2_command);
+          ch2.set_target_velocity(motor_data_in.channel_2_command);
         }
-        else if (data_in.channel_2_control_mode == MotorGo::ControlMode::None)
+        else if (motor_data_in.channel_2_control_mode ==
+                 MotorGo::ControlMode::None)
         {
           ch2.disable();
         }
         else
         {
-          ch2.set_power(data_in.channel_2_command);
+          ch2.set_power(motor_data_in.channel_2_command);
         }
 
-        if (data_in.channel_3_control_mode == MotorGo::ControlMode::Velocity)
+        if (motor_data_in.channel_3_control_mode ==
+            MotorGo::ControlMode::Velocity)
         {
-          ch3.set_target_velocity(data_in.channel_3_command);
+          ch3.set_target_velocity(motor_data_in.channel_3_command);
         }
-        else if (data_in.channel_3_control_mode == MotorGo::ControlMode::None)
+        else if (motor_data_in.channel_3_control_mode ==
+                 MotorGo::ControlMode::None)
         {
           ch3.disable();
         }
         else
         {
-          ch3.set_power(data_in.channel_3_command);
+          ch3.set_power(motor_data_in.channel_3_command);
         }
 
-        if (data_in.channel_4_control_mode == MotorGo::ControlMode::Velocity)
+        if (motor_data_in.channel_4_control_mode ==
+            MotorGo::ControlMode::Velocity)
         {
-          ch4.set_target_velocity(data_in.channel_4_command);
+          ch4.set_target_velocity(motor_data_in.channel_4_command);
         }
-        else if (data_in.channel_4_control_mode == MotorGo::ControlMode::None)
+        else if (motor_data_in.channel_4_control_mode ==
+                 MotorGo::ControlMode::None)
         {
           ch4.disable();
         }
         else
         {
-          ch4.set_power(data_in.channel_4_command);
+          ch4.set_power(motor_data_in.channel_4_command);
         }
 
         last_data_time = millis();

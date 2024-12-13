@@ -11,14 +11,15 @@ from .common import crc16
 from .imu import IMU
 from .message_parser import MessageParser
 from .messages import (
-    DataFromPeri,
     DataToPeri,
+    IMUDataFromPeri,
     InitFromPeri,
     InitToPeri,
     InvalidFromPeri,
     InvalidToPeri,
     MessageFromPeri,
     MessageToPeri,
+    MotorDataFromPeri,
     PIDToPeri,
 )
 from .motor_channel import BrakeMode, ControlMode, MotorChannel
@@ -29,7 +30,7 @@ class Plink:
 
     SUPPORTED_BOARD_IDS = [0x03]
 
-    def __init__(self, frequency: int = 200, timeout: float = 1.0):
+    def __init__(self, frequency: int = 300, timeout: float = 1.0):
         """
         Initialize the Plink communication object with motor channels and communication settings.
         """
@@ -53,7 +54,7 @@ class Plink:
 
         # Add an extra 4 bytes at the end for padding
         # esp32 slave has a bug that requires this
-        self.transfer_size = 76
+        self.transfer_size = 40
 
         self.imu = IMU(self.frequency)
 
@@ -61,6 +62,9 @@ class Plink:
         self.reset_pin = DigitalOutputDevice(22, active_high=False, initial_value=False)
 
         self.config_message_queue = deque()
+
+        # Flag to indicate that a reset has been detected
+        self.reset_detected = False
 
     def reset(self):
         """
@@ -92,7 +96,7 @@ class Plink:
         else:
             print("Not starting connection to protect MotorGo")
 
-    def update_motor_states(self, response: DataFromPeri):
+    def update_motor_states(self, response: MotorDataFromPeri):
         """
         Update the motor states based on the input structure data.
 
@@ -112,7 +116,8 @@ class Plink:
         self.channel4.update_position(response.channel_4_pos)
         self.channel4.update_velocity(response.channel_4_vel)
 
-        # Update the IMU data
+    def update_imu_state(self, response: IMUDataFromPeri):
+
         self.imu.update(
             response.gyro_x,
             response.gyro_y,
@@ -214,13 +219,17 @@ class Plink:
         response = self.transfer(message)
 
         # Update the motor states
-        if isinstance(response, DataFromPeri):
+        if isinstance(response, MotorDataFromPeri):
             self.update_motor_states(response)
+            self.last_message_time = time.time()
+        elif isinstance(response, IMUDataFromPeri):
+            self.update_imu_state(response)
             self.last_message_time = time.time()
 
         elif isinstance(response, InitFromPeri):
             print("Received initialization response, re-doing initialization")
             self.initialize_comms()
+            self.last_message_time = time.time()
 
         elif isinstance(response, InvalidFromPeri):
             print("Invalid response received")
@@ -235,9 +244,11 @@ class Plink:
             [self.channel1, self.channel2, self.channel3, self.channel4]
         ):
             channel_number = i + 1
-            if channel._pid_update_ready:
+            if channel._pid_update_ready or self.reset_detected:
 
-                new_params = channel._get_velocity_gain_update()
+                new_params = channel._get_velocity_gain_update(
+                    force=self.reset_detected
+                )
 
                 # Prepare and add the PID update message to the queue
                 self.config_message_queue.append(PIDToPeri(channel_number, *new_params))
@@ -261,6 +272,7 @@ class Plink:
                     # If not connected, attempt to re-initialize
                     print("Attempting to re-initialize connection")
                     self.connected = self.initialize_comms()
+                    self.reset_detected = True
 
         except KeyboardInterrupt:
             # Handle keyboard interrupt (Ctrl+C)

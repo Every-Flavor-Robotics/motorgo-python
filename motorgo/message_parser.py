@@ -1,14 +1,20 @@
 import struct
 import time
 
-from .messages import DataFromPeri, InitFromPeri, InvalidFromPeri, MessageFromPeri
+from .messages import (
+    IMUDataFromPeri,
+    InitFromPeri,
+    InvalidFromPeri,
+    MessageFromPeri,
+    MotorDataFromPeri,
+)
 
 
 class MessageParser:
     """A singleton class to parse messages from the Plink."""
 
     _instance = None
-    AVAILABLE_MESSAGES = [InitFromPeri, DataFromPeri]
+    AVAILABLE_MESSAGES = [InitFromPeri, MotorDataFromPeri, IMUDataFromPeri]
 
     def __new__(cls):
         if cls._instance is None:

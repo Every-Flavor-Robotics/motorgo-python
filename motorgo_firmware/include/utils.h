@@ -17,8 +17,9 @@ void freq_println(String str, int freq)
 }
 
 #define DATA_MESSAGE_TYPE 0x02
-#define BUFFER_OUT_SIZE 69
-union data_out_t
+// 8 floats * 4 + 1 byte = 33
+#define MOTOR_DATA_OUT_SIZE 33
+union motor_data_out_t
 {
   struct __attribute__((packed))
   {
@@ -36,22 +37,9 @@ union data_out_t
 
     float channel_4_pos;
     float channel_4_vel;
-
-    // IMU data
-    float gyro_x;
-    float gyro_y;
-    float gyro_z;
-
-    float accel_x;
-    float accel_y;
-    float accel_z;
-
-    float mag_x;
-    float mag_y;
-    float mag_z;
   };
 
-  uint8_t raw[BUFFER_OUT_SIZE];
+  uint8_t raw[MOTOR_DATA_OUT_SIZE];
 };
 
 enum class BrakeMode : uint8_t
@@ -60,8 +48,8 @@ enum class BrakeMode : uint8_t
   COAST
 };
 
-#define BUFFER_IN_SIZE 25
-union data_in_t
+#define MOTOR_DATA_IN_SIZE 25
+union motor_data_in_t
 {
   struct __attribute__((packed))
   {
@@ -86,7 +74,33 @@ union data_in_t
     BrakeMode channel_4_brake_mode;
   };
 
-  uint8_t raw[BUFFER_IN_SIZE];
+  uint8_t raw[MOTOR_DATA_IN_SIZE];
+};
+
+#define IMU_DATA_MESSAGE_TYPE 0x03
+// 9 floats * 4 + 1 byte = 37
+#define IMU_DATA_OUT_SIZE 37
+union imu_data_out_t
+{
+  struct __attribute__((packed))
+  {
+    uint8_t message_type = IMU_DATA_MESSAGE_TYPE;
+
+    // IMU data
+    float gyro_x;
+    float gyro_y;
+    float gyro_z;
+
+    float accel_x;
+    float accel_y;
+    float accel_z;
+
+    float mag_x;
+    float mag_y;
+    float mag_z;
+  };
+
+  uint8_t raw[IMU_DATA_OUT_SIZE];
 };
 
 #define INIT_MESSAGE_TYPE 0x01
@@ -118,7 +132,7 @@ union init_output_t
   uint8_t raw[INIT_OUT_SIZE];
 };
 
-#define PID_CONTROLLER_MESSAGE_TYPE 0x03
+#define PID_CONTROLLER_MESSAGE_TYPE 0x04
 // 5 floats, 2 uint8_t: 4 * 5 + 2 = 22
 #define PID_CONTROLLER_FROM_CONTROLLER_SIZE 22
 union pid_controller_from_controller_t
@@ -139,9 +153,9 @@ union pid_controller_from_controller_t
 
 // Buffer out size is 69 bytes, pad with 4 bytes for DMA driver, and then
 // round up to the nearest multiple of 4
-#define BUFFER_SIZE (76)
+#define BUFFER_SIZE (40)
 
-void print_data_in(const data_in_t &data)
+void print_data_in(const motor_data_in_t &data)
 {
   String output = "";
 

@@ -181,14 +181,14 @@ class MotorChannel:
                 self.velocity_lpf = lpf
                 self._pid_update_ready = True
 
-    def _get_velocity_gain_update(self) -> tuple:
+    def _get_velocity_gain_update(self, force=False) -> tuple:
         """Returns the new PID gains and resets the flag.
 
         Returns:
             tuple: A tuple containing the PID gains.
         """
 
-        if self._pid_update_ready:
+        if self._pid_update_ready or force:
             with self.lock:
                 self._pid_update_ready = False
                 return (
