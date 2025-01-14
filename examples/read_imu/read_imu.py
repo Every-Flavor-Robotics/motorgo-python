@@ -5,7 +5,7 @@
 
 import time
 
-from pyplink import Plink
+from motorgo.plink import Plink
 
 
 def main():
@@ -26,23 +26,17 @@ def main():
     # - 3-axis gyroscope data in rad/s
     # - 3-axis magnetometer data in uT
 
-    # Additionally, it can povided fused 3-axis orientation data in the form of
-    # of a gravity vector relative to the sensor frame
-    # The orientation data will only be computed if the IMU object
-    # is calibrated. Calibrating requires that the Plink be stationary
-    imu.calibrate()
-
     while True:
         # Print out the IMU data
         print("----")
         print(f"Acceleration: {imu.accel}")
         print(f"Angular Velocity: {imu.gyro}")
-        # print(f"Magnetic Field: {imu.mag}")
+        print(f"Magnetic Field: {imu.mag}")
         print(f"Gravity Vector: {imu.gravity_vector}")
         print("----")
 
         # Delay as long as you need, communications continue in the background
-        time.sleep(0.1)
+        time.sleep(2)
 
 
 if __name__ == "__main__":
