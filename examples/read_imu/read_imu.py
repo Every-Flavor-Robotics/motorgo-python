@@ -36,7 +36,7 @@ def main():
         print("----")
 
         # Delay as long as you need, communications continue in the background
-        time.sleep(2)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
