@@ -7,6 +7,7 @@ from collections import deque
 import spidev
 from gpiozero import DigitalInputDevice, DigitalOutputDevice
 
+from .brushed_motor_channel import BrakeMode, ControlMode, MotorChannel
 from .common import crc16
 from .imu import IMU
 from .message_parser import MessageParser
@@ -21,7 +22,6 @@ from .messages import (
     MessageToPeri,
     PIDToPeri,
 )
-from .motor_channel import BrakeMode, ControlMode, MotorChannel
 from .version import __version__
 
 
