@@ -3,7 +3,7 @@ import struct
 import time
 from abc import ABC, abstractmethod
 
-from .motor_channel import MotorChannel
+from .brushed_motor_channel import MotorChannel
 
 
 class Message:
