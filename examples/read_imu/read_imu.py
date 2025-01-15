@@ -12,6 +12,11 @@ def main():
     # Create a Plink object
     plink = Plink()
 
+    # The first thing to set up for a Plink is the power supply voltage.
+    # This is the voltage you are providing to the Plink on the barrel jack.
+    # If this is the battery, make sure this is the charged voltage.
+    plink.power_supply_voltage = 9.0
+
     # This command will initiate communications and confirm
     # that the Plink is connected/available
     plink.connect()

@@ -9,45 +9,61 @@ from motorgo import BrakeMode, ControlMode, Plink
 
 
 def main():
-    # Create a Plink object
+    # Create a Plink object, the main interface to the MotorGo board
     plink = Plink()
 
-    # This command will initiate communications and confirm
-    # that the Plink is connected/available
-    plink.connect()
+    # The first thing to set up for a Plink is the power supply voltage.
+    # This is the voltage you are providing to the Plink on the barrel jack.
+    # If this is the battery, make sure this is the charged voltage.
+    plink.power_supply_voltage = 9.0
 
     # The Plink object has 4 MotorChannel objects, corresponding to the 4 motor channels
     # on the board
-    # You can save references as local variables for convenience (as below) or
-    # access them directly from the Plink object
+    # You can access them directly: plink.channel1
+    # Or you can save references as local variables for convenience:
     left_motor = plink.channel1
     right_motor = plink.channel2
 
-    # You can configure the control mode of the motor channels
-    # The two options are ControlMode.VELOCITY and ControlMode.POWER
-    left_motor.control_mode = ControlMode.VELOCITY
+    # Next, you need to set the motor voltage limit.
+    # This is the maximum voltage your motor channels will output to protect the motors.
+    # The voltage limit is 0 by default, which means the motors will not move if this is not set.
+    left_motor.motor_voltage_limit = 6.0
+    right_motor.motor_voltage_limit = 6.0
+    plink.channel3.motor_voltage_limit = 6.0
+    plink.channel4.motor_voltage_limit = 6.0
+
+    # Finally, connect to the MotorGo board and psuh the configuration
+    plink.connect()
+
+    # You can configure how you want to control the motor channels.
+    # Power mode: Set the power of the motor in the range [-1, 1]
+    #            This directly corresponds to setting a voltage to the motor
+    #
+    # Velocity mode: Set the velocity of the motor in rad/s
+    #              This mode requires setting the velocity PID gains
+    #              It also requires an encoder to be connected to the motor
+    left_motor.control_mode = ControlMode.POWER
     right_motor.control_mode = ControlMode.VELOCITY
     plink.channel3.control_mode = ControlMode.POWER
     plink.channel4.control_mode = ControlMode.POWER
 
-    # Main program loop
-    velocity_command = 0.0
+    # If you are using ControlMode.VELOCITY, you must set the velocity PID gains
+    right_motor.set_velocity_pid_gains(4.5, 0.1, 0.0)
+
     while True:
 
-        # Set the velocity command in rad/s
-        left_motor.velocity_command = velocity_command
-        right_motor.velocity_command = -velocity_command
+        # Set motor powers
+        # Set the power command in the range [-1, 1]
+        left_motor.power_command = 0.5
 
-        # Ramp up the velocity command
-        velocity_command += 0.1
-        if velocity_command > 5.0:
-            velocity_command = -5.0
+        # Set the velocity command in rad/s
+        right_motor.velocity_command = 1.2
 
         # Set the power command in the range [-1, 1]
-        plink.channel3.power_command = 0.5
-        plink.channel4.power_command = -0.5
+        plink.channel3.power_command = 0.25
+        plink.channel4.power_command = -0.25
 
-        # You can read the position and velocity of the motor channels
+        # You can read the position and velocity of the motor channels from the encoders
         print("----")
         print(
             f"Channel 1 position: {plink.channel1.position}, velocity: {plink.channel1.velocity}"
@@ -63,8 +79,7 @@ def main():
         )
         print("----")
 
-        # Delay as long as you need, communications continue in the background
-        time.sleep(0.1)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":
