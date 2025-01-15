@@ -106,20 +106,38 @@ class InitToPeri(MessageToPeri):
     - Target Frequency (float)
     """
 
-    SIZE = 5
+    SIZE = 25
     TYPE = 0x01
 
-    def __init__(self, target_frequency: float):
+    def __init__(
+        self,
+        target_frequency: float,
+        power_supply_voltage: float,
+        channel_1_voltage_limit: float,
+        channel_2_voltage_limit: float,
+        channel_3_voltage_limit: float,
+        channel_4_voltage_limit: float,
+    ):
         self.target_frequency = target_frequency
+        self.power_supply_voltage = power_supply_voltage
+        self.channel_1_voltage_limit = channel_1_voltage_limit
+        self.channel_2_voltage_limit = channel_2_voltage_limit
+        self.channel_3_voltage_limit = channel_3_voltage_limit
+        self.channel_4_voltage_limit = channel_4_voltage_limit
 
     def get_packed_struct(self, output_size=None) -> bytes:
         """
         Pack the structure data into bytes for transmission.
         """
         packed = struct.pack(
-            "<Bf",
+            "<B6f",
             self.TYPE,
             self.target_frequency,
+            self.power_supply_voltage,
+            self.channel_1_voltage_limit,
+            self.channel_2_voltage_limit,
+            self.channel_3_voltage_limit,
+            self.channel_4_voltage_limit,
         )
 
         assert len(packed) == self.SIZE

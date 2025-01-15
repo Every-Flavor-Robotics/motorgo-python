@@ -62,6 +62,8 @@ class Plink:
 
         self.config_message_queue = deque()
 
+        self.power_supply_voltage = None
+
     def reset(self):
         """
         Reset the Plink by toggling the reset pin.
@@ -73,6 +75,9 @@ class Plink:
         Start the communication thread.
         """
         atexit.register(self.shutdown)  # Register cleanup function
+
+        if self.power_supply_voltage is None:
+            raise ValueError("Voltage limit must be set before connecting")
 
         # Reset the Plink
         self.reset()
@@ -139,7 +144,14 @@ class Plink:
             message = self.transfer(data)
 
         # Prepare data actual initialization data
-        data = InitToPeri(self.frequency)
+        data = InitToPeri(
+            self.frequency,
+            self.power_supply_voltage,
+            self.channel1.motor_voltage_limit,
+            self.channel2.motor_voltage_limit,
+            self.channel3.motor_voltage_limit,
+            self.channel4.motor_voltage_limit,
+        )
 
         initialized = False
 

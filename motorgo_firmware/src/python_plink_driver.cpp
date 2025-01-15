@@ -18,6 +18,11 @@ MotorGo::MotorChannel &ch2 = plink.ch2;
 MotorGo::MotorChannel &ch3 = plink.ch3;
 MotorGo::MotorChannel &ch4 = plink.ch4;
 
+MotorGo::ChannelConfiguration ch1_config;
+MotorGo::ChannelConfiguration ch2_config;
+MotorGo::ChannelConfiguration ch3_config;
+MotorGo::ChannelConfiguration ch4_config;
+
 // Pin the MotorGo uses to indicate that it is ready to transfer new data
 #define DATA_READY 36
 
@@ -74,8 +79,6 @@ void init_spi_comms()
       // Decode data into data_in_t
       memcpy(init_in.raw, rx_buf, INIT_IN_SIZE);
 
-      Serial.println(init_in.message_type);
-
       if (init_in.message_type == INIT_MESSAGE_TYPE)
       {
         ready = true;
@@ -87,6 +90,22 @@ void init_spi_comms()
 
         // Delay time in microseconds
         delay_time = 1000000 / init_in.frequency;
+
+        // Set up motor channels
+        ch1_config.power_supply_voltage = init_in.power_supply_voltage;
+        ch2_config.power_supply_voltage = init_in.power_supply_voltage;
+        ch3_config.power_supply_voltage = init_in.power_supply_voltage;
+        ch4_config.power_supply_voltage = init_in.power_supply_voltage;
+
+        ch1_config.voltage_limit = init_in.channel_1_voltage_limit;
+        ch2_config.voltage_limit = init_in.channel_2_voltage_limit;
+        ch3_config.voltage_limit = init_in.channel_3_voltage_limit;
+        ch4_config.voltage_limit = init_in.channel_4_voltage_limit;
+
+        ch1.init(ch1_config);
+        ch2.init(ch2_config);
+        ch3.init(ch3_config);
+        ch4.init(ch4_config);
       }
     }
   }
@@ -171,8 +190,6 @@ void setup()
   Serial.println(BUFFER_OUT_SIZE);
 
   Serial.println("start spi slave");
-
-  plink.init();
 
   init_spi_comms();
 

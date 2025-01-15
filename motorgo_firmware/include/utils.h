@@ -90,7 +90,7 @@ union data_in_t
 };
 
 #define INIT_MESSAGE_TYPE 0x01
-#define INIT_IN_SIZE 5
+#define INIT_IN_SIZE 25
 union init_input_t
 {
   struct __attribute__((packed))
@@ -99,6 +99,11 @@ union init_input_t
 
     // Target update frequency
     float frequency;
+    float power_supply_voltage;
+    float channel_1_voltage_limit;
+    float channel_2_voltage_limit;
+    float channel_3_voltage_limit;
+    float channel_4_voltage_limit;
   };
 
   uint8_t raw[INIT_IN_SIZE];
