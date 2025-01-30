@@ -24,7 +24,7 @@ def flash():
 
     click.secho("Configuring MotorGo for PiHat mode", fg="green")
 
-    click.secho("Step 1: Identify MotorGo board", fg="blue")
+    click.secho("Step 1: Identifying MotorGo board", fg="blue")
     # Retrieve the firmware index
     firmware_index = requests.get(FIRMWARE_INDEX).json()
     # Retrieve get_board_id_firmware
