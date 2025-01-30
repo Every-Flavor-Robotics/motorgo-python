@@ -179,6 +179,9 @@ def download_and_flash_firmware():
     # Download the firmware
     firmware_dir = download_firmware(download_dir)
 
+    # Convert to click.Path
+    firmware_dir = str(firmware_dir)
+
     # Flash the firmware
     flash_firmware(firmware_dir)
 
