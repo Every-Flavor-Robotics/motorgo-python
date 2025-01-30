@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "motorgo-python"
+version = "0.1.0"
+description = "Python API for the Raspberry Pi + MotorGo line."
+readme = "README.md"
+authors = [
+    { name = "Swapnil Pande", email = "swapnil@everyflavor.bot" }
+]
+requires-python = ">=3.6"
+dependencies = [
+    "spidev",
+    "gpiozero",
+    "RPi.GPIO",
+    "numpy",
+    "imufusion",
+]
+
+[project.urls]
+Homepage = "https://github.com/Every-Flavor-Robotics/motorgo-python"
+
+[project.scripts]
+motorgo = "motorgo.cli.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
