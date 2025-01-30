@@ -170,7 +170,7 @@ def download_firmware(download_dir=None):
     return firmware_dir
 
 
-def download_and_flash_firmware(self):
+def download_and_flash_firmware():
     """Download the firmware and flash it to the ESP32-S3"""
 
     # Create a temp directory to download the firmware
