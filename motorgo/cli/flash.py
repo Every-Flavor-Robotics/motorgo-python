@@ -1,0 +1,177 @@
+import time
+from gpiozero import DigitalOutputDevice
+import esptool
+from pathlib import Path
+
+import click
+import tempfile
+import requests
+import zipfile
+
+
+BOOT_PIN = 5  # BCM pin connected to ESP BOOT
+RESET_PIN = 22  # BCM pin connected to ESP RESET
+
+# Set up each pin as an active-high digital output, initially HIGH
+# so that both lines are released (high) by default.
+boot_pin = DigitalOutputDevice(BOOT_PIN, active_high=True, initial_value=True)
+reset_pin = DigitalOutputDevice(RESET_PIN, active_high=True, initial_value=True)
+
+
+def enter_program_mode():
+    """
+    Drive the ESP32-S3 into its serial bootloader mode:
+      1. Pull BOOT low.
+      2. Toggle RESET low momentarily.
+      3. Release RESET (go high).
+      4. Wait briefly.
+      5. Release BOOT (go high).
+    """
+    print("Pulling BOOT low...")
+    boot_pin.off()
+    time.sleep(0.1)
+
+    print("Resetting ESP (pulling RESET low)...")
+    reset_pin.off()
+    time.sleep(0.1)
+
+    print("Releasing RESET (going high)...")
+    reset_pin.on()
+    time.sleep(0.5)
+
+    print("Releasing BOOT (going high)...")
+    boot_pin.on()
+
+
+def reset():
+    """ """
+
+    print("Resetting ESP (pulling RESET low)...")
+    reset_pin.off()
+    time.sleep(0.1)
+
+    print("Releasing RESET (going high)...")
+    reset_pin.on()
+    time.sleep(0.5)
+
+
+@click.command()
+@click.argument("firmware_dir", type=click.Path(exists=True))
+@click.option(
+    "--port",
+    default="/dev/ttyS0",
+    help="Serial port to use (e.g. /dev/ttyACM1, /dev/ttyUSB0, etc.)",
+)
+@click.option("--baud", default="460800", help="Baud rate for flashing")
+def flash_firmware(
+    firmware_dir,
+    port="/dev/ttyS0",
+    baud="460800",
+):
+    """
+    Flash an ESP32-S3 with multiple binary files (bootloader, partition table,
+    boot_app0, and main firmware) using esptool, similar to PlatformIO's command:
+
+      esptool.py
+          --chip esp32s3
+          --port /dev/ttyACM1
+          --baud 460800
+          --before default_reset
+          --after hard_reset
+          write_flash -z --flash_mode dio
+          --flash_freq 80m
+          --flash_size detect
+          0x0000 bootloader.bin
+          0x8000 partitions.bin
+          0xe000 boot_app0.bin
+          0x10000 firmware.bin
+
+    :param port: Serial port to use (e.g. "/dev/ttyACM1", "/dev/ttyUSB0", etc.)
+    :param baud: Baud rate for flashing
+    :param bootloader: Path to the bootloader.bin
+    :param partitions: Path to the partitions.bin
+    :param boot_app0: Path to the boot_app0.bin
+    :param firmware: Path to the main firmware .bin
+    """
+
+    # Paths to the binary files
+    # Check that fimrware_dir exists
+    firmware_dir = Path(firmware_dir)
+    assert firmware_dir.exists(), f"Directory {firmware_dir} does not exist."
+
+    bootloader = firmware_dir / "bootloader.bin"
+    partitions = firmware_dir / "partitions.bin"
+    boot_app0 = firmware_dir / "boot_app0.bin"
+    firmware = firmware_dir / "firmware.bin"
+
+    args = [
+        "--chip",
+        "esp32s3",
+        "--port",
+        port,
+        "--baud",
+        baud,
+        "--before",
+        "default_reset",
+        "--after",
+        "hard_reset",
+        "write_flash",
+        "-z",
+        "--flash_mode",
+        "dio",
+        "--flash_freq",
+        "80m",
+        "--flash_size",
+        "detect",
+        # Offsets + file paths, as strings
+        "0x0000",
+        str(bootloader),
+        "0x8000",
+        str(partitions),
+        "0xe000",
+        str(boot_app0),
+        "0x10000",
+        str(firmware),
+    ]
+    esptool.main(args)
+
+
+def download_firmware():
+    """Download the firmware from the server"""
+
+    firmware_url = "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/assets/plink_motorgo_python_0_1_0.zip"
+
+    # Create temp directory
+    temp_dir = tempfile.mkdtemp()
+    print(f"Downloading firmware to {temp_dir}")
+
+    # Download the firmware
+    firmware_path = Path(temp_dir) / "firmware.zip"
+    with requests.get(firmware_url, stream=True) as response:
+        response.raise_for_status()
+        with open(firmware_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+    # Unzip the firmware
+    with zipfile.ZipFile(firmware_path, "r") as zip_ref:
+        zip_ref.extractall(temp_dir)
+
+    # Return path to the firmware directory
+    return temp_dir
+
+
+# def download_and_flash_firmware(self):
+#     """Download the firmware and flash it to the ESP32-S3"""
+
+#     # Download the firmware
+#     firmware_dir = download_firmware()
+
+
+#     # Flash the firmware
+#     flash_firmware(firmware_dir)
+
+
+if __name__ == "__main__":
+    download_firmware()
+    flash_firmware()
