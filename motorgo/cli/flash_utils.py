@@ -132,8 +132,7 @@ def flash_firmware(
 def download_firmware(firmware_url, download_dir=None):
     """Download the firmware from the server"""
 
-    firmware_name = "plink_motorgo_python_0_1_0"
-    firmware_url = "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/assets/plink_motorgo_python_0_1_0.zip"
+    firmware_name = "test"
 
     if download_dir is not None:
         # Check that the directory exists
