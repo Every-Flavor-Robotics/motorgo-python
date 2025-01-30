@@ -1,4 +1,5 @@
 import click
+from .flash import download_and_flash_firmware
 
 
 @click.group()
