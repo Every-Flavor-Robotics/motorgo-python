@@ -55,14 +55,14 @@ def reset():
     time.sleep(0.5)
 
 
-@click.command()
-@click.argument("firmware_dir", type=click.Path(exists=True))
-@click.option(
-    "--port",
-    default="/dev/ttyS0",
-    help="Serial port to use (e.g. /dev/ttyACM1, /dev/ttyUSB0, etc.)",
-)
-@click.option("--baud", default="460800", help="Baud rate for flashing")
+# @click.command()
+# @click.argument("firmware_dir", type=click.Path(exists=True))
+# @click.option(
+#     "--port",
+#     default="/dev/ttyS0",
+#     help="Serial port to use (e.g. /dev/ttyACM1, /dev/ttyUSB0, etc.)",
+# )
+# @click.option("--baud", default="460800", help="Baud rate for flashing")
 def flash_firmware(
     firmware_dir,
     port="/dev/ttyS0",
@@ -182,8 +182,12 @@ def download_and_flash_firmware():
     # Convert to click.Path
     firmware_dir = str(firmware_dir)
 
+    enter_program_mode()
+
     # Flash the firmware
     flash_firmware(firmware_dir)
+
+    reset()
 
     # Clean up the firmware directory
     download_dir.rmdir()
