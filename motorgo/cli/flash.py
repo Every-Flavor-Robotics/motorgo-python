@@ -136,17 +136,22 @@ def flash_firmware(
     esptool.main(args)
 
 
-def download_firmware():
+def download_firmware(download_dir=None):
     """Download the firmware from the server"""
 
+    firmware_name = "plink_motorgo_python_0_1_0"
     firmware_url = "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/assets/plink_motorgo_python_0_1_0.zip"
 
-    # Create temp directory
-    temp_dir = tempfile.mkdtemp()
-    print(f"Downloading firmware to {temp_dir}")
+    if download_dir is not None:
+        # Check that the directory exists
+        assert Path(download_dir).exists(), f"Directory {download_dir} does not exist."
+    else:
+        # Create temp directory to download the firmware
+        download_dir = tempfile.mkdtemp()
+        print(f"Downloading firmware to {download_dir}")
 
     # Download the firmware
-    firmware_path = Path(temp_dir) / "firmware.zip"
+    firmware_path = Path(download_dir) / "firmware.zip"
     with requests.get(firmware_url, stream=True) as response:
         response.raise_for_status()
         with open(firmware_path, "wb") as file:
@@ -155,10 +160,14 @@ def download_firmware():
 
     # Unzip the firmware
     with zipfile.ZipFile(firmware_path, "r") as zip_ref:
-        zip_ref.extractall(temp_dir)
+        zip_ref.extractall(download_dir)
+
+    # Confirm that the firmware directory exists
+    firmware_dir = Path(download_dir) / firmware_name
+    assert firmware_dir.exists(), f"Directory {firmware_dir} does not exist."
 
     # Return path to the firmware directory
-    return temp_dir
+    return firmware_dir
 
 
 # def download_and_flash_firmware(self):
@@ -173,5 +182,6 @@ def download_firmware():
 
 
 if __name__ == "__main__":
-    download_firmware()
+    firmware_dir = download_firmware()
+    print(firmware_dir)
     flash_firmware()
