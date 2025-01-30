@@ -129,10 +129,8 @@ def flash_firmware(
     esptool.main(args)
 
 
-def download_firmware(firmware_url, download_dir=None):
+def download_firmware(firmware_name, firmware_url, download_dir=None):
     """Download the firmware from the server"""
-
-    firmware_name = "test"
 
     if download_dir is not None:
         # Check that the directory exists
