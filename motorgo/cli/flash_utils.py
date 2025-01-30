@@ -160,14 +160,14 @@ def download_firmware(firmware_name, firmware_url, download_dir=None):
     return firmware_dir
 
 
-def download_and_flash_firmware(firmware_url):
+def download_and_flash_firmware(firmware_name, firmware_url):
     """Download the firmware and flash it to the ESP32-S3"""
 
     # Create a temp directory to download the firmware
     with tempfile.TemporaryDirectory() as download_dir:
 
         # Download the firmware
-        firmware_dir = download_firmware(firmware_url, download_dir)
+        firmware_dir = download_firmware(firmware_name, firmware_url, download_dir)
 
         enter_program_mode()
 

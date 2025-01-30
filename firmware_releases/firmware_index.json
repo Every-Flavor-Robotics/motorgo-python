@@ -2,5 +2,11 @@
     "get_board_id_firmware": {
         "url": "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/firmware_releases/get_board_id.zip"
     },
-    "motorgo_python_firmware": {}
+    "motorgo_python_firmware": {
+        "0x03": {
+            "latest": {
+                "url": "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/firmware_releases/plink_motorgo_python_0_1_0.zip"
+            }
+        }
+    }
 }
