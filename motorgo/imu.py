@@ -6,6 +6,21 @@ import numpy as np
 
 
 class IMU:
+    """The IMU class provides the data from the onboard IMU on the MotorGo board.
+
+    The IMU class provides access to the gyroscope, accelerometer, and magnetometer data from the onboard IMU. This class
+    also automatically provides AHRS filtering to calculate the orientation of the board. This allows you to direftly access
+    the orientation of the board as a quaternion or gravity vector. The class provides all of its data as properties, so you
+    can access the data directly without needing to call functions.
+
+    Attributes:
+        gyro (np.ndarray): The gyroscope data as a numpy array [x, y, z].
+        accel (np.ndarray): The accelerometer data as a numpy array [x, y, z].
+        mag (np.ndarray): The magnetometer data as a numpy array [x, y, z].
+        gravity_vector (np.ndarray): The gravity vector calculated by the AHRS filter as a numpy array [x, y, z].
+        quaternion (np.ndarray): The quaternion calculated by the AHRS filter as a numpy array [w, x, y, z].
+    """
+
     def __init__(self, frequency, mag_enabled=False):
         """
         Initialize the IMU with default values.

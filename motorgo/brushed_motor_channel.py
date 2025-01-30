@@ -3,6 +3,24 @@ import threading
 
 # Enums to match C++ definitions
 class ControlMode:
+    """Enum for setting the control mode of the motor channel.
+
+    The ControlMode enum defines the possible control modes for the motor channel. The control mode can be set to POWER for controlling the motor
+    with a power command, VELOCITY for controlling the motor with a velocity command, or NONE for no control. When the control mode is set to VELOCITY,
+    you must also set the PID gains for the velocity controller for the motors to operate correctly. When the control mode is set to POWER, the motor
+    will be controlled with a power command between -1.0 and 1.0. When the control mode is set to NONE, the motor channel will be disabled.
+
+    Attributes:
+        VELOCITY (int): Used to set the control mode for velocity control.
+        POWER (int): Used to set the control mode for power control.
+        NONE (int): Used to set the control mode to none.
+
+    example:
+        from motorgo import ControlMode
+        motor_channel.control_mode = ControlMode.POWER
+        motor_channel.control_mode = ControlMode.VELOCITY
+    """
+
     VELOCITY = 2
     POWER = 1
     NONE = 0
@@ -14,6 +32,26 @@ class BrakeMode:
 
 
 class MotorChannel:
+    """Interface for a single motor channel.
+
+    The MotorChannel class provides an interface for controlling a single motor channel. It supports controlling the motor in power mode
+    or velocity mode. For velocity control, the class exposes the PID control parameters for tuning the controller. The MotorChannel class
+    also provides access to read the current position and velocity of the motor. All of the commands and encoder data are set and accessed
+    as properties of the class, rather than through function calls.
+
+    Attributes:
+        control_mode (ControlMode): The control mode for the motor channel. The control mode can be set to POWER, VELOCITY, or NONE.
+        velocity_p (float): The proportional gain for the velocity PID controller.
+        velocity_i (float): The integral gain for the velocity PID controller.
+        velocity_d (float): The derivative gain for the velocity PID controller.
+        velocity_output_ramp (float): The output ramp rate for the velocity PID controller.
+        velocity_lpf (float): The low-pass filter constant for the velocity PID controller.
+        velocity_command (float): The velocity command for the motor channel in rad/s. Only used when control_mode is set to VELOCITY.
+        power_command (float): The power command for the motor channel [-1.0, 1.0]. Only used when control_mode is set to POWER.
+        position (float): The current position of the motor.
+        velocity (float): The current velocity of the motor.
+    """
+
     def __init__(self):
         """
         Initialize the MotorChannel with default control and brake modes.
