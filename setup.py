@@ -5,7 +5,11 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=["spidev", "gpiozero", "RPi.GPIO", "numpy", "imufusion"],
-    entry_points={},
+    entry_points={
+        "console_scripts": [
+            "motorgo=motorgo.cli.cli:main",
+        ],
+    },
     author="Swapnil Pande",
     author_email="swapnil@everyflavor.bot",
     description="Python API for the Raspberry Pi + MotorGo line.",
