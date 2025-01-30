@@ -174,20 +174,17 @@ def download_and_flash_firmware():
     """Download the firmware and flash it to the ESP32-S3"""
 
     # Create a temp directory to download the firmware
-    download_dir = tempfile.mkdtemp()
+    with tempfile.TemporaryDirectory() as download_dir:
 
-    # Download the firmware
-    firmware_dir = download_firmware(download_dir)
+        # Download the firmware
+        firmware_dir = download_firmware(download_dir)
 
-    enter_program_mode()
+        enter_program_mode()
 
-    # Flash the firmware
-    flash_firmware(firmware_dir)
+        # Flash the firmware
+        flash_firmware(firmware_dir)
 
-    reset()
-
-    # Clean up the firmware directory
-    download_dir.rmdir()
+        reset()
 
 
 if __name__ == "__main__":
