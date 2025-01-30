@@ -170,18 +170,21 @@ def download_firmware(download_dir=None):
     return firmware_dir
 
 
-# def download_and_flash_firmware(self):
-#     """Download the firmware and flash it to the ESP32-S3"""
+def download_and_flash_firmware(self):
+    """Download the firmware and flash it to the ESP32-S3"""
 
-#     # Download the firmware
-#     firmware_dir = download_firmware()
+    # Create a temp directory to download the firmware
+    download_dir = tempfile.mkdtemp()
 
+    # Download the firmware
+    firmware_dir = download_firmware(download_dir)
 
-#     # Flash the firmware
-#     flash_firmware(firmware_dir)
+    # Flash the firmware
+    flash_firmware(firmware_dir)
+
+    # Clean up the firmware directory
+    download_dir.rmdir()
 
 
 if __name__ == "__main__":
-    firmware_dir = download_firmware()
-    print(firmware_dir)
-    flash_firmware()
+    download_and_flash_firmware()
