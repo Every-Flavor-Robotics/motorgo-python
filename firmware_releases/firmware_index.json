@@ -1,6 +1,6 @@
 {
-    "board_id_firmware": {
-        "url": ""
+    "get_board_id_firmware": {
+        "url": "https://github.com/Every-Flavor-Robotics/motorgo-python/raw/refs/heads/main/firmware_releases/get_board_id.zip"
     },
     "motorgo_python_firmware": {}
 }
