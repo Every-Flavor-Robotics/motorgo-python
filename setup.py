@@ -7,7 +7,7 @@ setup(
     install_requires=["spidev", "gpiozero", "RPi.GPIO", "numpy", "imufusion"],
     entry_points={
         "console_scripts": [
-            "motorgo=motorgo.cli.cli:main",
+            "motorgo=motorgo.cli.cli:cli",
         ],
     },
     author="Swapnil Pande",
