@@ -9,7 +9,10 @@ def cli():
 
 @cli.command()
 def flash():
-    print("Hello, World!")
+    """
+    Flash an ESP32-S3 with the latest firmware.
+    """
+    download_and_flash_firmware()
 
 
 if __name__ == "__main__":
