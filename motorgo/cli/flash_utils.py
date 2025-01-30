@@ -1,13 +1,12 @@
+import tempfile
 import time
-from gpiozero import DigitalOutputDevice
-import esptool
+import zipfile
 from pathlib import Path
 
 import click
-import tempfile
+import esptool
 import requests
-import zipfile
-
+from gpiozero import DigitalOutputDevice
 
 BOOT_PIN = 5  # BCM pin connected to ESP BOOT
 RESET_PIN = 22  # BCM pin connected to ESP RESET
@@ -16,6 +15,8 @@ RESET_PIN = 22  # BCM pin connected to ESP RESET
 # so that both lines are released (high) by default.
 boot_pin = DigitalOutputDevice(BOOT_PIN, active_high=True, initial_value=True)
 reset_pin = DigitalOutputDevice(RESET_PIN, active_high=True, initial_value=True)
+
+FIRMWARE_INDEX = "https://raw.githubusercontent.com/Every-Flavor-Robotics/motorgo-python/refs/heads/main/firmware_releases/firmware_index.json"
 
 
 def enter_program_mode():
@@ -55,14 +56,6 @@ def reset():
     time.sleep(0.5)
 
 
-# @click.command()
-# @click.argument("firmware_dir", type=click.Path(exists=True))
-# @click.option(
-#     "--port",
-#     default="/dev/ttyS0",
-#     help="Serial port to use (e.g. /dev/ttyACM1, /dev/ttyUSB0, etc.)",
-# )
-# @click.option("--baud", default="460800", help="Baud rate for flashing")
 def flash_firmware(
     firmware_dir,
     port="/dev/ttyS0",
@@ -136,7 +129,7 @@ def flash_firmware(
     esptool.main(args)
 
 
-def download_firmware(download_dir=None):
+def download_firmware(firmware_url, download_dir=None):
     """Download the firmware from the server"""
 
     firmware_name = "plink_motorgo_python_0_1_0"
@@ -170,14 +163,14 @@ def download_firmware(download_dir=None):
     return firmware_dir
 
 
-def download_and_flash_firmware():
+def download_and_flash_firmware(firmware_url):
     """Download the firmware and flash it to the ESP32-S3"""
 
     # Create a temp directory to download the firmware
     with tempfile.TemporaryDirectory() as download_dir:
 
         # Download the firmware
-        firmware_dir = download_firmware(download_dir)
+        firmware_dir = download_firmware(firmware_url, download_dir)
 
         enter_program_mode()
 
