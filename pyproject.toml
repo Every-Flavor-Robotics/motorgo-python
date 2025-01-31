@@ -7,7 +7,7 @@ name = "motorgo-python"
 version = "0.1.0"
 description = "Python API for the Raspberry Pi + MotorGo line."
 readme = "README.md"
-license = "GPL-3.0-only"
+license = { text = "GPL-3.0-only" }
 authors = [
     { name = "Swapnil Pande", email = "swapnil@everyflavor.bot" }
 ]
