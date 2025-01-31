@@ -10,7 +10,9 @@
 
 `motorgo-python` provides a Python API to control a MotorGo when it is mounted to a Raspberry Pi as a PiHat. It enables you to control the motor channels and stream the enocder and IMU data from the MotorGo. This package also includes a `motorgo` command line utility (CLI) that lets you configure settings on the MotorGo and perform basic operations without the need for code.
 
-Please follow our setup guide at (our docs)[https://docs.motorgo.net].
+Please follow our setup guide at [our docs](https://docs.motorgo.net).
+
+MotorGo hardware available at [https://motorgo.net](https://motorgo.net).
 
 ## Supported Boards
 
